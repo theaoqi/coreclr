@@ -41,7 +41,7 @@ jobs:
 
       # Public Linux Build Pool
       ${{ if and(eq(parameters.osGroup, 'Linux'), eq(variables['System.TeamProject'], 'public')) }}:
-        name:  NetCorePublic-Pool
+        name:  'Hosted Ubuntu 1604'
         queue: BuildPool.Ubuntu.1604.Amd64.Open
 
       # Official Build Linux Pool
