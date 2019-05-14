@@ -30,7 +30,8 @@ jobs:
     timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
 
     # Send telemetry for all builds
-    enableTelemetry: true
+    #enableTelemetry: true
+    enableTelemetry: false
     helixRepo: 'dotnet/coreclr'
     helixType: ${{ parameters.helixType }}
 
