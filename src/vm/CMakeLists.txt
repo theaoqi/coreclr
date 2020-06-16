@@ -757,6 +757,13 @@ else(WIN32)
             ${ARCH_SOURCES_DIR}/crthelpers.S
             ${ARCH_SOURCES_DIR}/pinvokestubs.S
         )
+    elseif(CLR_CMAKE_TARGET_ARCH_MIPS64)
+        set(VM_SOURCES_WKS_ARCH_ASM
+            ${ARCH_SOURCES_DIR}/asmhelpers.S
+            ${ARCH_SOURCES_DIR}/pinvokestubs.S
+            ${ARCH_SOURCES_DIR}/calldescrworkermips64.S
+            ${ARCH_SOURCES_DIR}/crthelpers.S
+        )
     endif()
 
 endif(WIN32)
@@ -848,6 +855,16 @@ elseif(CLR_CMAKE_TARGET_ARCH_ARM64)
         gcinfodecoder.cpp
     )
 
+    set(VM_HEADERS_DAC_AND_WKS_ARCH
+        ${ARCH_SOURCES_DIR}/virtualcallstubcpu.hpp
+        exceptionhandling.h
+    )
+elseif(CLR_CMAKE_TARGET_ARCH_MIPS64)
+    set(VM_SOURCES_DAC_AND_WKS_ARCH
+        ${ARCH_SOURCES_DIR}/stubs.cpp
+        exceptionhandling.cpp
+        gcinfodecoder.cpp
+    )
     set(VM_HEADERS_DAC_AND_WKS_ARCH
         ${ARCH_SOURCES_DIR}/virtualcallstubcpu.hpp
         exceptionhandling.h

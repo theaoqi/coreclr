@@ -106,6 +106,13 @@ public:
 #define INTERRUPT_INSTR_CALL            0xBADC0DE1         
 #define INTERRUPT_INSTR_PROTECT_RET     0xBADC0DE2  
 
+#elif defined(_TARGET_MIPS64_)
+
+// The following encodings are undefined.
+#define INTERRUPT_INSTR                 0xffffffff
+#define INTERRUPT_INSTR_CALL            0xfffffffe
+#define INTERRUPT_INSTR_PROTECT_RET     0xfffffffd
+
 #endif // _TARGET_*
 
 #endif // HAVE_GCCOVER
