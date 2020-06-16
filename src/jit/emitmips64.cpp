@@ -1952,6 +1952,7 @@ void emitter::emitIns_S_R(instruction ins, emitAttr attr, regNumber reg1, int va
     else
     {
         ssize_t imm2 = (imm>>16) & 0xffff;
+        assert(isValidSimm16(imm >> 16));
         emitIns_R_I(INS_lui, EA_PTRSIZE, REG_AT, imm2);
         imm2 = imm & 0xffff;
         emitIns_R_R_I(INS_ori, EA_PTRSIZE, REG_AT, REG_AT, imm2);
@@ -2030,6 +2031,7 @@ void emitter::emitIns_R_S(instruction ins, emitAttr attr, regNumber reg1, int va
     else
     {
         ssize_t imm2 = (imm>>16) & 0xffff;
+        assert(isValidSimm16(imm >> 16));
         emitIns_R_I(INS_lui, EA_PTRSIZE, REG_AT, imm2);
         imm2 = imm & 0xffff;
         emitIns_R_R_I(INS_ori, EA_PTRSIZE, REG_AT, REG_AT, imm2);
@@ -3550,6 +3552,7 @@ void emitter::emitIns_J(instruction ins, BasicBlock* dst, int instrCount)
             emitIns_I(INS_bal, EA_PTRSIZE, 4);
 
             ssize_t imm = ((ssize_t)instrCount>>16);
+            assert(isValidSimm16(imm));
             emitIns_R_I(INS_lui, EA_PTRSIZE, REG_AT, imm);
             imm = (instrCount & 0xffff);
             emitIns_R_R_I(INS_ori, EA_PTRSIZE, REG_AT, REG_AT, imm);
@@ -4655,6 +4658,7 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
             else
             {
                 imm = dataOffs >> 16;
+                assert(isValidSimm16(imm));
                 *(code_t *)dst = emitInsOps(INS_lui, regs, &imm);
                 dst += 4;
 
@@ -4707,6 +4711,7 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
 
                 regs[1] = REG_AT;
                 imm = imm >> 16;
+                assert(isValidSimm16(imm));
                 *(code_t *)dst = emitInsOps(INS_lui, regs, &imm);
                 dst += 8;
             }
@@ -4798,6 +4803,7 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
                     *(code_t *)(dst+4) = emitInsOps(INS_ori, regs, &imm);
 
                     imm = imm >> 16;
+                    assert(isValidSimm16(imm));
                     *(code_t *)dst = emitInsOps(INS_lui, regs, &imm);
                     dst += 8;
                 }
