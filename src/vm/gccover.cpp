@@ -28,11 +28,15 @@
 #include "threadsuspend.h"
 
 #if defined(_TARGET_AMD64_) || defined(_TARGET_ARM_)
+////FIXME for MIPS: should confirm.
 #include "gcinfodecoder.h"
 #endif
 
 #include "disassembler.h"
 
+////FIXME for MIPS:
+//     all related target_macro should be confirmed for mips.
+//
 /****************************************************************************/
 
 MethodDesc* AsMethodDesc(size_t addr);
@@ -41,6 +45,9 @@ bool isCallToStopForGCJitHelper(PBYTE instrPtr);
 #if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
 static void replaceSafePointInstructionWithGcStressInstr(UINT32 safePointOffset, LPVOID codeStart);
 static bool replaceInterruptibleRangesWithGcStressInstr (UINT32 startOffset, UINT32 stopOffset, LPVOID codeStart);
+#elif defined(_TARGET_MIPS64_)
+//    _ASSERTE(!"not implemented for MIPS64 platform");
+#pragma message("unimplemented on MIPS yet")
 #endif
 
 // There is a call target instruction, try to find the MethodDesc for where target points to.
@@ -77,6 +84,19 @@ bool IsGcCoverageInterruptInstruction(PBYTE instrPtr)
 {
 #if defined(_TARGET_ARM64_)
     UINT32 instrVal = *reinterpret_cast<UINT32*>(instrPtr);
+    switch (instrVal)
+    {
+    case INTERRUPT_INSTR:
+    case INTERRUPT_INSTR_CALL:
+    case INTERRUPT_INSTR_PROTECT_RET:
+        return true;
+    default:
+        return false;
+    }
+#elif defined(_TARGET_MIPS64_)
+////FIXME for MIPS.
+    UINT32 instrVal = *reinterpret_cast<UINT32*>(instrPtr);
+    _ASSERTE(!"not implemented for MIPS64 platform");
     switch (instrVal)
     {
     case INTERRUPT_INSTR:
@@ -153,6 +173,12 @@ bool IsOriginalInstruction(PBYTE instrPtr, GCCoverageInfo* gcCover, DWORD offset
         UINT32 origInstrVal = *reinterpret_cast<UINT32*>(gcCover->savedCode + offset);
         return (instrVal == origInstrVal);
     }
+#elif defined(_TARGET_MIPS64_)
+////FIXME for MIPS.
+    _ASSERTE(!"not implemented for MIPS64 platform");
+    UINT8 instrVal = *reinterpret_cast<UINT8*>(instrPtr);
+    UINT8 origInstrVal = gcCover->savedCode[offset];
+    return (instrVal == origInstrVal);
 #else // x64 and x86
     UINT8 instrVal = *reinterpret_cast<UINT8*>(instrPtr);
     UINT8 origInstrVal = gcCover->savedCode[offset];
@@ -189,7 +215,7 @@ void SetupAndSprinkleBreakpoints(
                                  fZapped);
 
     // This is not required for ARM* as the above call does the work for both hot & cold regions
-#if !defined(_TARGET_ARM_) && !defined(_TARGET_ARM64_)
+#if !defined(_TARGET_ARM_) && !defined(_TARGET_ARM64_) && !defined(_TARGET_MIPS64_)
     if (gcCover->methodRegion.coldSize != 0)
     {
         gcCover->SprinkleBreakpoints(gcCover->savedCode + gcCover->methodRegion.hotSize, 
@@ -421,6 +447,8 @@ void ReplaceInstrAfterCall(PBYTE instrToReplace, MethodDesc* callMD)
     {
         *instrToReplace = INTERRUPT_INSTR;
     }
+#elif defined(_TARGET_MIPS64_)
+    _ASSERTE(!"not implemented for MIPS64 platform");
 #else
     _ASSERTE(!"not implemented for platform");
 #endif
@@ -798,6 +826,9 @@ void GCCoverageInfo::SprinkleBreakpoints(
         FlushInstructionCache(GetCurrentProcess(), (BYTE*)methodRegion.coldStartAddress, methodRegion.coldSize);
     }
 
+#elif defined(_TARGET_MIPS64_)
+////FIXME for MIPS:
+    _ASSERTE(!"not implemented for MIPS64 platform");
 #else    
     _ASSERTE(!"not implemented for platform");
 #endif // _TARGET_X86_
@@ -1082,6 +1113,8 @@ bool isCallToStopForGCJitHelper(PBYTE instrPtr)
             }
         }
     }
+#elif defined(_TARGET_MIPS64_)
+    _ASSERTE(!"not implemented for MIPS64 platform");
 #endif
    return false;
 }
@@ -1148,6 +1181,8 @@ static PBYTE getTargetOfCall(PBYTE instrPtr, PCONTEXT regs, PBYTE* nextInstr) {
    {
        return 0; // Fail
    }
+#elif defined(_TARGET_MIPS64_)
+    _ASSERTE(!"not implemented for MIPS64 platform");
 #endif
 
 #ifdef _TARGET_AMD64_
@@ -1384,6 +1419,9 @@ void RemoveGcCoverageInterrupt(TADDR instrPtr, BYTE * savedInstrPtr)
             *(DWORD *)instrPtr = *(DWORD *)savedInstrPtr;
 #elif defined(_TARGET_ARM64_)
         *(DWORD *)instrPtr = *(DWORD *)savedInstrPtr;
+#elif defined(_TARGET_MIPS64_)
+        _ASSERTE(!"not implemented for MIPS64 platform");
+        *(DWORD *)instrPtr = *(DWORD *)savedInstrPtr;
 #else
         *(BYTE *)instrPtr = *savedInstrPtr;
 #endif
@@ -1546,6 +1584,13 @@ void DoGcStress (PCONTEXT regs, MethodDesc *pMD)
     atCall = (instrVal == INTERRUPT_INSTR_CALL);
     afterCallProtect[0] = (instrVal == INTERRUPT_INSTR_PROTECT_RET);
 
+#elif defined(_TARGET_MIPS64_)
+    _ASSERTE(!"not implemented for MIPS64 platform");
+    DWORD instrVal = *(DWORD *)instrPtr;
+    forceStack[6] = &instrVal;            // This is so I can see it fastchecked
+
+    atCall = (instrVal == INTERRUPT_INSTR_CALL);
+    afterCallProtect[0] = (instrVal == INTERRUPT_INSTR_PROTECT_RET);
 #endif // _TARGET_*
 
 #ifdef _TARGET_X86_
@@ -1655,7 +1700,7 @@ void DoGcStress (PCONTEXT regs, MethodDesc *pMD)
     }
 #endif // _TARGET_X86_
 
-#if defined(_TARGET_X86_) || defined(_TARGET_AMD64_) || defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_X86_) || defined(_TARGET_AMD64_) || defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
 
     /* In non-fully interrruptable code, if the EIP is just after a call instr
        means something different because it expects that we are IN the
@@ -1707,6 +1752,9 @@ void DoGcStress (PCONTEXT regs, MethodDesc *pMD)
                     else
                         *(DWORD*)nextInstr = INTERRUPT_INSTR_32;
 #elif defined(_TARGET_ARM64_)
+                        *(DWORD*)nextInstr = INTERRUPT_INSTR;
+#elif defined(_TARGET_MIPS64_)
+                        _ASSERTE(!"not implemented for MIPS64 platform");
                         *(DWORD*)nextInstr = INTERRUPT_INSTR;
 #else
                         *nextInstr = INTERRUPT_INSTR;
@@ -1789,6 +1837,9 @@ void DoGcStress (PCONTEXT regs, MethodDesc *pMD)
         retValRegs[numberOfRegs++] = regs->R0;
 #elif defined(_TARGET_ARM64_)
         retValRegs[numberOfRegs++] = regs->X0;
+#elif defined(_TARGET_MIPS64_)
+        _ASSERTE(!"not implemented for MIPS64 platform");
+        retValRegs[numberOfRegs++] = regs->V0;
 #endif // _TARGET_ARM64_
     }
 
@@ -1852,6 +1903,8 @@ void DoGcStress (PCONTEXT regs, MethodDesc *pMD)
             regs->R0 = retValRegs[0];
 #elif defined(_TARGET_ARM64_)
             regs->X[0] = retValRegs[0];
+#elif defined(_TARGET_MIPS64_)
+    _ASSERTE(!"not implemented for MIPS64 platform");
 #else
             PORTABILITY_ASSERT("DoGCStress - return register");
 #endif            

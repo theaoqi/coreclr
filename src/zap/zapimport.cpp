@@ -839,6 +839,19 @@ void ZapVirtualMethodThunk::Save(ZapWriter * pZapWriter)
     // Slot ID is setup below, so now setup the initial target
     // to be our assembly helper.
     pImage->WriteReloc(&thunk, offsetof(CORCOMPILE_VIRTUAL_IMPORT_THUNK, m_pTarget), helper, 0, IMAGE_REL_BASED_PTR);
+#elif defined(_TARGET_MIPS64_)
+//can optimize ???
+
+    thunk.m_rgCode[0] = 0x37ec0000; //  ori t0,ra,0x0
+    thunk.m_rgCode[1] = 0x04110001; //  bal 8
+    thunk.m_rgCode[2] = 0x00000000; //  nop
+    thunk.m_rgCode[3] = 0xdff90014; //  ld  t9,20(ra)
+    thunk.m_rgCode[4] = 0x67eefff4; //  daddiu  t2,ra,-12
+    thunk.m_rgCode[5] = 0x03200008; //  jr  t9
+    thunk.m_rgCode[6] = 0x359f0000; //  ori ra,t0,0x0
+
+    pImage->WriteReloc(&thunk, offsetof(CORCOMPILE_VIRTUAL_IMPORT_THUNK, m_pTarget), helper, 0, IMAGE_REL_BASED_PTR);
+
 #else
     PORTABILITY_ASSERT("ZapVirtualMethodThunk::Save");
 #endif
