@@ -1080,7 +1080,7 @@ bool interceptor_ICJI::getSystemVAmd64PassStructInRegisterDescriptor(
 }
 
 void interceptor_ICJI::getMIPS64PassStructInRegisterDescriptor(
-    /* IN */ CORINFO_CLASS_HANDLE                                  structHnd,
+    /* IN */ CORINFO_CLASS_HANDLE                           structHnd,
     /* OUT */ MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* structPassInRegDescPtr)
 {
     //assert(!"unimplemented on MIPS yet");
