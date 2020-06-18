@@ -143,7 +143,6 @@ JIT/Methodical/flowgraph/dev10_bug679955/volatileLocal1/volatileLocal1.exe  #120
 JIT/Methodical/refany/_il_dbgseq/_il_dbgseq.exe
 JIT/Methodical/refany/_il_relseq/_il_relseq.exe
 JIT/Methodical/tailcall/Desktop/_il_relthread-race/_il_relthread-race.exe #12471 blocked on mips64
-JIT/Methodical/tailcall_v4/hijacking/hijacking.exe
 JIT/opt/ObjectStackAllocation/ObjectStackAllocationTests/ObjectStackAllocationTests.exe
 JIT/Performance/CodeQuality/Bytemark/Bytemark/Bytemark.exe
 JIT/Performance/CodeQuality/Roslyn/CscBench/CscBench.exe
@@ -157,7 +156,6 @@ JIT/Regression/CLR-x86-JIT/V1-M12-Beta2/b37646/b37646/b37646.exe
 JIT/Regression/CLR-x86-JIT/V1-M12-Beta2/b41852/b41852/b41852.exe
 JIT/Regression/CLR-x86-JIT/v2.1/DDB/b175679/b175679/b175679.exe
 JIT/Regression/JitBlue/DevDiv_461649/DevDiv_461649/DevDiv_461649.exe
-JIT/Regression/JitBlue/GitHub_19438/GitHub_19438/GitHub_19438.exe
 JIT/Regression/JitBlue/GitHub_22583/GitHub_22583/GitHub_22583.exe
 JIT/Regression/VS-ia64-JIT/V1.2-M01/b10827/b10827/b10827.exe
 JIT/superpmi/superpmicollect/Bytemark.exe

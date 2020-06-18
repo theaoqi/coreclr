@@ -23,15 +23,15 @@
 .macro PINVOKE_STUB __PInvokeStubFuncName,__PInvokeGenStubFuncName,__PInvokeStubWorkerName,VASigCookieReg,HiddenArg,SaveFPArgs,ShiftLeftAndOrSecret=0
 
         NESTED_ENTRY \__PInvokeStubFuncName, _TEXT, NoHandler
+        .set noreorder
 
         // get the stub
         ld   t0, VASigCookie__pNDirectILStub(\VASigCookieReg)
 
         // if null goto stub generation
-        //FIXME for MIPS: maybe it's better branching directly.
-        beq  t0, zero, LOCAL_LABEL(\__PInvokeStubFuncName\()_0)
+        beq  t0, zero, \__PInvokeGenStubFuncName
+        daddiu  t9, t9, %lo(\__PInvokeGenStubFuncName - \__PInvokeStubFuncName)   //NOTE: here 16-bits is enough.
 
-        ori t9, t0, 0
         .if (\ShiftLeftAndOrSecret == 1)
             //
             // We need to distinguish between a MethodDesc* and an unmanaged target.
@@ -41,12 +41,9 @@
             dsll            \HiddenArg, \HiddenArg, 1
             ori             \HiddenArg, \HiddenArg, 1
         .endif
-        EPILOG_BRANCH_REG   t9
 
-LOCAL_LABEL(\__PInvokeStubFuncName\()_0):
-
-        //FIXME for MIPS: maybe it's better branching directly.
-        EPILOG_BRANCH       \__PInvokeGenStubFuncName
+        jr  t0
+        ori t9, t0, 0
 
         NESTED_END \__PInvokeStubFuncName, _TEXT
 
@@ -69,9 +66,9 @@ LOCAL_LABEL(\__PInvokeStubFuncName\()_0):
         // save VASigCookieReg
         move  s1, \VASigCookieReg
 
-        lui  AT, %hi(%neg(%gp_rel(\__PInvokeStubFuncName)))
+        lui  AT, %hi(%neg(%gp_rel(\__PInvokeGenStubFuncName)))
         daddu  AT, AT, t9
-        daddiu  AT, AT, %lo(%neg(%gp_rel(\__PInvokeStubFuncName)))
+        daddiu  AT, AT, %lo(%neg(%gp_rel(\__PInvokeGenStubFuncName)))
         ld  t9, %call16(\__PInvokeStubWorkerName)(AT)
         jalr t9
 

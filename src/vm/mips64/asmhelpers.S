@@ -202,12 +202,6 @@ WRITE_BARRIER_ENTRY JIT_WriteBarrier
     .set noreorder
 
     sd  v1, 0(v0)
-    ori AT, ra, 0
-    bal 1f
-    nop
-1:
-    daddiu t9, ra, -16
-    ori ra, AT, 0
 
     lui  gp, %hi(%neg(%gp_rel(JIT_WriteBarrier)))
     daddu  gp, gp, t9
@@ -349,12 +343,10 @@ NESTED_ENTRY PrecodeFixupThunk, _TEXT, NoHandler
     daddu  METHODDESC_REGISTER, t3, t1      // pMethodDesc
 
     b  ThePreStub
-    daddu  t9, t9, SIZEOF__PrecodeFixupThunk   //Space of function PrecodeFixupThunk.
-
+    daddiu  t9, t9, %lo(C_FUNC(ThePreStub) - C_FUNC(PrecodeFixupThunk))   //NOTE: here 16-bits is enough.
 NESTED_END PrecodeFixupThunk, _TEXT
-////FIXME: Here must be empty!!!
-NESTED_ENTRY ThePreStub, _TEXT, NoHandler
 
+NESTED_ENTRY ThePreStub, _TEXT, NoHandler
     .set noreorder
 
     PROLOG_WITH_TRANSITION_BLOCK
@@ -552,9 +544,6 @@ LEAF_END SinglecastDelegateInvokeStub, _TEXT
 
 // void JIT_ByRefWriteBarrier
 //
-// NOTE:
-//   For mips, the function JIT_ByRefWriteBarrier must be ahead of JIT_CheckedWriteBarrier.
-//
 // On entry:
 //   t8 : the source address (points to object reference to write)
 //   v0 : the destination address (object reference written here)
@@ -569,16 +558,13 @@ WRITE_BARRIER_ENTRY JIT_ByRefWriteBarrier
     ld  v1, 0(t8)
     daddiu  t8, t8, 8
     b  C_FUNC(JIT_CheckedWriteBarrier)
-    daddiu t9, t9, 16       //16 is the size of JIT_ByRefWriteBarrier.
+    daddiu  t9, t9, %lo(C_FUNC(JIT_CheckedWriteBarrier) - C_FUNC(JIT_ByRefWriteBarrier))   //NOTE: here 16-bits is enough.
 
 WRITE_BARRIER_END JIT_ByRefWriteBarrier
 
 //-----------------------------------------------------------------------------
 // Simple WriteBarriers
 // void JIT_CheckedWriteBarrier(Object** dst, Object* src)
-//
-// NOTE:
-//   For mips, the function JIT_CheckedWriteBarrier must be right after JIT_ByRefWriteBarrier!!!
 //
 // On entry:
 //   v0 : the destination address (LHS of the assignment)
@@ -594,12 +580,6 @@ WRITE_BARRIER_END JIT_ByRefWriteBarrier
 WRITE_BARRIER_ENTRY JIT_CheckedWriteBarrier
 
     .set noreorder
-//    ori  AT, ra, 0
-//    bal  1f
-//    nop
-//1:
-//    daddiu t9, ra, -12
-//    ori  ra, AT, 0
 
     lui  t2, %hi(%neg(%gp_rel(JIT_CheckedWriteBarrier)))
     daddu  t2, t2, t9
@@ -613,7 +593,7 @@ WRITE_BARRIER_ENTRY JIT_CheckedWriteBarrier
     slt  t2, t1, v0
     or  AT, t2, AT
     beq  AT, zero, C_FUNC(JIT_WriteBarrier)
-    nop
+    daddiu  t9, t9, %lo(C_FUNC(JIT_WriteBarrier) - C_FUNC(JIT_CheckedWriteBarrier))   //NOTE: here 16-bits is enough.
 
     sd  v1, 0(v0)
     jr  ra
@@ -1008,25 +988,30 @@ LEAF_END JIT_GetSharedGCStaticBaseNoCtor_SingleAppDomain, _TEXT
 // ------------------------------------------------------------------
 // __declspec(naked) void F_CALL_CONV JIT_Stelem_Ref(PtrArray* array, unsigned idx, Object* val)
 LEAF_ENTRY JIT_Stelem_Ref, _TEXT
+    .set noreorder
+
     ////FIXME for MIPS64.
     // We retain arguments as they were passed and use a0 = array, a1 = idx, a2 = val
 
     // check for null array
     beq  a0, zero, LOCAL_LABEL(ThrowNullReferenceException)
-
     // idx bounds check
     ld  a3, ArrayBase__m_NumComponents(a0)
     slt  AT, a1, a3
     beq  AT, zero, LOCAL_LABEL(ThrowIndexOutOfRangeException)
+    nop
 
     // fast path to null assignment (doesn't need any write-barriers)
     beq  a2, zero, LOCAL_LABEL(AssigningNull)
+    nop
 
     // Verify the array-type and val-type matches before writing
     ld  t2, 0(a0) // t2 = array MT
     ld  a3, 0(a2) // a3 = val->GetMethodTable()
     ld  t2, MethodTable__m_ElementType(t2) // array->GetArrayElementTypeHandle()
     beq  a3, t2, C_FUNC(JIT_Stelem_DoWrite)
+    daddiu  t9, t9, %lo(C_FUNC(JIT_Stelem_DoWrite) - C_FUNC(JIT_Stelem_Ref))   //NOTE: here 16-bits is enough.
+    daddiu  t9, t9, %lo(C_FUNC(JIT_Stelem_Ref) - C_FUNC(JIT_Stelem_DoWrite))   //NOTE: here 16-bits is enough.
 
     // Types didnt match but allow writing into an array of objects
     lui  a3, %hi(%neg(%gp_rel(JIT_Stelem_Ref)))
@@ -1036,9 +1021,12 @@ LEAF_ENTRY JIT_Stelem_Ref, _TEXT
     ld     a3, 0(a3)  // a3 = *g_pObjectClass
     // array type matches with Object*
     beq  a3, t2, C_FUNC(JIT_Stelem_DoWrite)
+    daddiu  t9, t9, %lo(C_FUNC(JIT_Stelem_DoWrite) - C_FUNC(JIT_Stelem_Ref))   //NOTE: here 16-bits is enough.
+    daddiu  t9, t9, %lo(C_FUNC(JIT_Stelem_Ref) - C_FUNC(JIT_Stelem_DoWrite))   //NOTE: here 16-bits is enough.
 
     // array type and val type do not exactly match. Raise frame and do detailed match
     b  C_FUNC(JIT_Stelem_Ref_NotExactMatch)
+    daddiu  t9, t9, %lo(C_FUNC(JIT_Stelem_Ref_NotExactMatch) - C_FUNC(JIT_Stelem_Ref))   //NOTE: here 16-bits is enough.
 
 LOCAL_LABEL(AssigningNull):
     // Assigning null doesn't need write barrier
@@ -1046,6 +1034,7 @@ LOCAL_LABEL(AssigningNull):
     daddu  a0, a0, a1           // a0 = a0 + (a1 x 8) = array->m_array[idx]
     sd  a2, PtrArray__m_Array(a0) // array->m_array[idx] = val
     jr  ra
+    nop
 
 LOCAL_LABEL(ThrowNullReferenceException):
     // Tail call JIT_InternalThrow(NullReferenceException)
@@ -1055,6 +1044,7 @@ LOCAL_LABEL(ThrowNullReferenceException):
     ld  t9, %call16(JIT_InternalThrow)(AT)
     li  a0, CORINFO_NullReferenceException_ASM
     jr t9
+    nop
 
 LOCAL_LABEL(ThrowIndexOutOfRangeException):
     // Tail call JIT_InternalThrow(NullReferenceException)
@@ -1064,6 +1054,7 @@ LOCAL_LABEL(ThrowIndexOutOfRangeException):
     ld  t9, %call16(JIT_InternalThrow)(AT)
     li  a0, CORINFO_IndexOutOfRangeException_ASM
     jr t9
+    nop
 
 LEAF_END JIT_Stelem_Ref, _TEXT
 
@@ -1074,19 +1065,9 @@ LEAF_END JIT_Stelem_Ref, _TEXT
 //
 NESTED_ENTRY JIT_Stelem_Ref_NotExactMatch, _TEXT, NoHandler
 
-    daddiu  sp, sp, -48
-    .cfi_adjust_cfa_offset 48
-    //PROLOG_SAVE_REG_PAIR_INDEXED   fp, ra, 48
-    sd fp, 0(sp)
-    sd ra, 8(sp)
-    .cfi_rel_offset fp, 0
-    .cfi_rel_offset ra, 8
-    move fp, sp
-    .cfi_def_cfa_register fp
-    bal  1f
-    //nop
-1:
-    daddiu t9, ra, -24
+    .set  noreorder
+    PROLOG_SAVE_REG_PAIR_INDEXED   fp, ra, 48
+
     // Spill callee saved registers
     PROLOG_SAVE_REG_PAIR  a0, a1, 16
     PROLOG_SAVE_REG  a2, 32
@@ -1101,9 +1082,11 @@ NESTED_ENTRY JIT_Stelem_Ref_NotExactMatch, _TEXT, NoHandler
     ld  t9, %call16(ObjIsInstanceOfNoGC)(AT)
     move  a0, a2
     jalr  t9
+    nop
 
     daddiu  AT, zero, TypeHandle_CanCast
     beq  AT, v0, LOCAL_LABEL(DoWrite)             // ObjIsInstance returned TypeHandle::CanCast
+    nop
 
     // check via raising frame
 LOCAL_LABEL(NeedFrame):  ////unused label.
@@ -1117,17 +1100,21 @@ LOCAL_LABEL(NeedFrame):  ////unused label.
     daddiu  a0, sp, 32             // a0 = &val
     // ArrayStoreCheck(&val, &array)
     jalr  t9
+    nop
 
 LOCAL_LABEL(DoWrite):
+    ld  t9, 40(sp)
     EPILOG_RESTORE_REG_PAIR           a0, a1, 16
     EPILOG_RESTORE_REG                a2, 32
     EPILOG_RESTORE_REG_PAIR_INDEXED   fp, ra,   48
     b C_FUNC(JIT_Stelem_DoWrite)
+    daddiu  t9, t9, %lo(C_FUNC(JIT_Stelem_DoWrite) - C_FUNC(JIT_Stelem_Ref_NotExactMatch))   //NOTE: here 16-bits is enough.
 NESTED_END JIT_Stelem_Ref_NotExactMatch, _TEXT
 
 // ------------------------------------------------------------------
 // __declspec(naked) void F_CALL_CONV JIT_Stelem_DoWrite(PtrArray* array, unsigned idx, Object* val)
 LEAF_ENTRY  JIT_Stelem_DoWrite, _TEXT
+    .set noreorder
 
     // Setup args for JIT_WriteBarrier. v0 = &array->m_array[idx], v1 = val
     daddiu  v0, a0, PtrArray__m_Array // v0 = &array->m_array
@@ -1138,6 +1125,7 @@ LEAF_ENTRY  JIT_Stelem_DoWrite, _TEXT
     // Branch to the write barrier (which is already correctly overwritten with
     // single or multi-proc code based on the current CPU
     b  C_FUNC(JIT_WriteBarrier)
+    daddiu  t9, t9, %lo(C_FUNC(JIT_WriteBarrier) - C_FUNC(JIT_Stelem_DoWrite))   //NOTE: here 16-bits is enough.
 LEAF_END JIT_Stelem_DoWrite, _TEXT
 
 #ifdef FEATURE_HIJACK

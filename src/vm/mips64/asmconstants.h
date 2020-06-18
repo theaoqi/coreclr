@@ -190,7 +190,6 @@ ASMCONSTANTS_C_ASSERT(CONTEXT_Pc == offsetof(T_CONTEXT,Pc))
 #define Offset_PrecodeChunkIndex             23
 #define MethodDesc_ALIGNMENT_SHIFT           3
 #define FixupPrecode_ALIGNMENT_SHIFT_1       5
-#define SIZEOF__PrecodeFixupThunk            36
 
 ASMCONSTANTS_C_ASSERT(SIZEOF__FixupPrecode == sizeof(FixupPrecode));
 ASMCONSTANTS_C_ASSERT(Offset_PrecodeChunkIndex == offsetof(FixupPrecode, m_PrecodeChunkIndex));

@@ -28,6 +28,12 @@ static short splitLow(int value) {
     return (value & 0xffff);
 }
 
+// Returns true if 'value' is a legal signed immediate 16 bit encoding.
+static bool isValidSimm16(ssize_t value)
+{
+    return -( ((int)1) << 15 ) <= value && value < ( ((int)1) << 15 );
+};
+
 /*
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -1527,49 +1533,46 @@ void CodeGen::instGen_Set_Reg_To_Imm(emitAttr size, regNumber reg, ssize_t imm, 
     }
     else
     {
-        if (emitter::emitIns_valid_imm_for_mov(imm, size))
+        ssize_t imm2 = 0;
+        if (isValidSimm16(imm))
         {
-            emit->emitIns_R_R_I(INS_daddiu, size, reg, REG_R0, imm);
+            emit->emitIns_R_R_I(INS_addiu, EA_4BYTE, reg, REG_R0, imm);
         }
-        else if (-(((long)1)<<31) <= imm && imm < (((long)1)<<31))
+        else if (isValidSimm16(imm >> 16))
         {
-            ssize_t imm2 = splitLow(imm >> 16);
+            imm2 = splitLow(imm >> 16);
             emit->emitIns_R_I(INS_lui, EA_PTRSIZE, reg, imm2);
-
             imm2 = splitLow(imm);
-            emit->emitIns_R_R_I(INS_ori, size, reg, reg, imm2);
+            emit->emitIns_R_R_I(INS_ori, EA_PTRSIZE, reg, reg, imm2);
+        }
+        else if (isValidSimm16(imm >> 32))
+        {
+            imm2 = splitLow(imm >> 32);
+            emit->emitIns_R_I(INS_lui, EA_PTRSIZE, reg, imm2);
+            imm2 = splitLow(imm >> 16);
+            emit->emitIns_R_R_I(INS_ori, EA_PTRSIZE, reg, reg, imm2);
+
+            // dsll(reg, reg, 16);
+            emit->emitIns_R_R_I(INS_dsll, EA_PTRSIZE, reg, reg, 16);
+            imm2 = splitLow(imm);
+            emit->emitIns_R_R_I(INS_ori, EA_PTRSIZE, reg, reg, imm2);
         }
         else
         {
-            ssize_t imm2 = splitLow(imm >> 48);
-            if (imm2)
-            {
-                emit->emitIns_R_I(INS_lui, EA_PTRSIZE, reg, imm2);
-                imm2 = splitLow(imm >> 32);
-                emit->emitIns_R_R_I(INS_ori, EA_PTRSIZE, reg, reg, imm2);
+            imm2 = splitLow(imm >> 48);
+            emit->emitIns_R_I(INS_lui, EA_PTRSIZE, reg, imm2);
+            imm2 = splitLow(imm >> 32);
+            emit->emitIns_R_R_I(INS_ori, EA_PTRSIZE, reg, reg, imm2);
 
-                // dsll(reg, reg, 16);
-                emit->emitIns_R_R_I(INS_dsll, EA_PTRSIZE, reg, reg, 16);
-                imm2 = splitLow(imm >> 16);
-                emit->emitIns_R_R_I(INS_ori, EA_PTRSIZE, reg, reg, imm2);
+            // dsll(reg, reg, 16);
+            emit->emitIns_R_R_I(INS_dsll, EA_PTRSIZE, reg, reg, 16);
+            imm2 = splitLow(imm >> 16);
+            emit->emitIns_R_R_I(INS_ori, EA_PTRSIZE, reg, reg, imm2);
 
-                // dsll(reg, reg, 16);
-                emit->emitIns_R_R_I(INS_dsll, EA_PTRSIZE, reg, reg, 16);
-                imm2 = splitLow(imm);
-                emit->emitIns_R_R_I(INS_ori, size, reg, reg, imm2);
-            }
-            else
-            {
-                imm2 = splitLow(imm >> 32);
-                emit->emitIns_R_I(INS_lui, EA_PTRSIZE, reg, imm2);
-                imm2 = splitLow(imm >> 16);
-                emit->emitIns_R_R_I(INS_ori, EA_PTRSIZE, reg, reg, imm2);
-
-                // dsll(reg, reg, 16);
-                emit->emitIns_R_R_I(INS_dsll, EA_PTRSIZE, reg, reg, 16);
-                imm2 = splitLow(imm);
-                emit->emitIns_R_R_I(INS_ori, size, reg, reg, imm2);
-            }
+            // dsll(reg, reg, 16);
+            emit->emitIns_R_R_I(INS_dsll, EA_PTRSIZE, reg, reg, 16);
+            imm2 = splitLow(imm);
+            emit->emitIns_R_R_I(INS_ori, EA_PTRSIZE, reg, reg, imm2);
         }
     }
 
@@ -4071,32 +4074,44 @@ void CodeGen::genCodeForCompare(GenTree* tree, bool IsJump)
                 }
                 else
                 {
-                    ssize_t imm2 = splitLow(imm >> 48);
-
-                    if (imm2)
+                    ssize_t imm2 = 0;
+                    if (isValidSimm16(imm))
                     {
+                        emit->emitIns_R_R_I(INS_addiu, EA_4BYTE, REG_AT, REG_R0, imm);
+                    }
+                    else if (isValidSimm16(imm >> 16))
+                    {
+                        imm2 = splitLow(imm >> 16);
                         emit->emitIns_R_I(INS_lui, EA_PTRSIZE, REG_AT, imm2);
-                        imm2 = splitLow(imm >> 32);
+                        imm2 = splitLow(imm);
                         emit->emitIns_R_R_I(INS_ori, EA_PTRSIZE, REG_AT, REG_AT, imm2);
-
-                        // dsll(reg, reg, 16);
-                        emit->emitIns_R_R_I(INS_dsll, EA_8BYTE, REG_AT, REG_AT, 16);
+                    }
+                    else if (isValidSimm16(imm >> 32))
+                    {
+                        imm2 = splitLow(imm >> 32);
+                        emit->emitIns_R_I(INS_lui, EA_PTRSIZE, REG_AT, imm2);
                         imm2 = splitLow(imm >> 16);
                         emit->emitIns_R_R_I(INS_ori, EA_PTRSIZE, REG_AT, REG_AT, imm2);
 
                         // dsll(reg, reg, 16);
-                        emit->emitIns_R_R_I(INS_dsll, EA_8BYTE, REG_AT, REG_AT, 16);
+                        emit->emitIns_R_R_I(INS_dsll, EA_PTRSIZE, REG_AT, REG_AT, 16);
                         imm2 = splitLow(imm);
                         emit->emitIns_R_R_I(INS_ori, EA_PTRSIZE, REG_AT, REG_AT, imm2);
                     }
                     else
                     {
-                        imm2 = splitLow(imm >> 32);
+                        imm2 = splitLow(imm >> 48);
                         emit->emitIns_R_I(INS_lui, EA_PTRSIZE, REG_AT, imm2);
+                        imm2 = splitLow(imm >> 32);
+                        emit->emitIns_R_R_I(INS_ori, EA_PTRSIZE, REG_AT, REG_AT, imm2);
+
+                        // dsll(reg, reg, 16);
+                        emit->emitIns_R_R_I(INS_dsll, EA_PTRSIZE, REG_AT, REG_AT, 16);
                         imm2 = splitLow(imm >> 16);
                         emit->emitIns_R_R_I(INS_ori, EA_PTRSIZE, REG_AT, REG_AT, imm2);
+
                         // dsll(reg, reg, 16);
-                        emit->emitIns_R_R_I(INS_dsll, EA_8BYTE, REG_AT, REG_AT, 16);
+                        emit->emitIns_R_R_I(INS_dsll, EA_PTRSIZE, REG_AT, REG_AT, 16);
                         imm2 = splitLow(imm);
                         emit->emitIns_R_R_I(INS_ori, EA_PTRSIZE, REG_AT, REG_AT, imm2);
                     }
