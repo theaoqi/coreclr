@@ -1309,7 +1309,7 @@ void MyICJI::getMIPS64PassStructInRegisterDescriptor(
     /* IN */ CORINFO_CLASS_HANDLE                                  structHnd,
     /* OUT */ MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* structPassInRegDescPtr)
 {
-    assert(!"unimplemented on MIPS yet");
+    //assert(!"unimplemented on MIPS yet");
 }
 
 // Stuff on ICorDynamicInfo
