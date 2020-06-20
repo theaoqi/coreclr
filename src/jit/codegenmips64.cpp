@@ -34,6 +34,55 @@ static bool isValidSimm16(ssize_t value)
     return -( ((int)1) << 15 ) <= value && value < ( ((int)1) << 15 );
 };
 
+static void set_Reg_To_Imm(emitter* emit, emitAttr size, regNumber reg, ssize_t imm)
+{
+    // reg cannot be a FP register
+    assert(!genIsValidFloatReg(reg));
+
+    size = EA_SIZE(size);
+
+    if (-1 == (imm >> 15) || 0 == (imm >> 15)) {
+        emit->emitIns_R_R_I(INS_addiu, size, reg, REG_R0, imm);
+        return;
+    }
+
+    if (0 == (imm >> 16)) {
+        emit->emitIns_R_R_I(INS_ori, size, reg, REG_R0, imm);
+        return;
+    }
+
+    if (-1 == (imm >> 31) || 0 == (imm >> 31)) {
+        emit->emitIns_R_I(INS_lui, size, reg, static_cast<uint16_t>(imm >> 16));
+    } else if (0 == (imm >> 32)) {
+        emit->emitIns_R_I(INS_lui, size, reg, static_cast<uint16_t>(imm >> 16));
+        emit->emitIns_R_R_I_I(INS_dinsu, size, reg, REG_R0, 32, 32);
+    } else if (-1 == (imm >> 47) || 0 == (imm >> 47)) {
+        emit->emitIns_R_I(INS_lui, size, reg, static_cast<uint16_t>(imm >> 32));
+        if (static_cast<uint16_t>(imm >> 16))
+            emit->emitIns_R_R_I(INS_ori, size, reg, reg, static_cast<uint16_t>(imm >> 16));
+        emit->emitIns_R_R_I(INS_dsll, size, reg, reg, 16);
+    } else if (0 == (imm >> 48)) {
+        emit->emitIns_R_I(INS_lui, size, reg, static_cast<uint16_t>(imm >> 32));
+        emit->emitIns_R_R_I_I(INS_dinsu, size, reg, REG_R0, 32, 32);
+        if (static_cast<uint16_t>(imm >> 16))
+            emit->emitIns_R_R_I(INS_ori, size, reg, reg, static_cast<uint16_t>(imm >> 16));
+        emit->emitIns_R_R_I(INS_dsll, size, reg, reg, 16);
+    } else {
+        emit->emitIns_R_I(INS_lui, size, reg, static_cast<uint16_t>(imm >> 48));
+        if (static_cast<uint16_t>(imm >> 32))
+            emit->emitIns_R_R_I(INS_ori, size, reg, reg, static_cast<uint16_t>(imm >> 32));
+        if (static_cast<uint16_t>(imm >> 16)) {
+            emit->emitIns_R_R_I(INS_dsll, size, reg, reg, 16);
+            emit->emitIns_R_R_I(INS_ori, size, reg, reg, static_cast<uint16_t>(imm >> 16));
+            emit->emitIns_R_R_I(INS_dsll, size, reg, reg, 16);
+        } else {
+            emit->emitIns_R_R_I(INS_dsll32, size, reg, reg, 0);
+        }
+    }
+    if (static_cast<uint16_t>(imm))
+        emit->emitIns_R_R_I(INS_ori, size, reg, reg, static_cast<uint16_t>(imm));
+}
+
 /*
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -1510,63 +1559,11 @@ void CodeGen::genEHCatchRet(BasicBlock* block)
 
 void CodeGen::instGen_Set_Reg_To_Imm(emitAttr size, regNumber reg, ssize_t imm, insFlags flags)
 {
-//can amend this function!
-
-    // reg cannot be a FP register
-    assert(!genIsValidFloatReg(reg));
-
     size = EA_SIZE(size); // Strip any Reloc flags from size if we aren doing relocs.
 
     emitter* emit = getEmitter();
 
-    if (imm == 0)
-    {
-        instGen_Set_Reg_To_Zero(size, reg, flags);
-    }
-    else
-    {
-        ssize_t imm2 = 0;
-        if (isValidSimm16(imm))
-        {
-            emit->emitIns_R_R_I(INS_addiu, EA_4BYTE, reg, REG_R0, imm);
-        }
-        else if (isValidSimm16(imm >> 16))
-        {
-            imm2 = splitLow(imm >> 16);
-            emit->emitIns_R_I(INS_lui, EA_PTRSIZE, reg, imm2);
-            imm2 = splitLow(imm);
-            emit->emitIns_R_R_I(INS_ori, EA_PTRSIZE, reg, reg, imm2);
-        }
-        else if (isValidSimm16(imm >> 32))
-        {
-            imm2 = splitLow(imm >> 32);
-            emit->emitIns_R_I(INS_lui, EA_PTRSIZE, reg, imm2);
-            imm2 = splitLow(imm >> 16);
-            emit->emitIns_R_R_I(INS_ori, EA_PTRSIZE, reg, reg, imm2);
-
-            // dsll(reg, reg, 16);
-            emit->emitIns_R_R_I(INS_dsll, EA_PTRSIZE, reg, reg, 16);
-            imm2 = splitLow(imm);
-            emit->emitIns_R_R_I(INS_ori, EA_PTRSIZE, reg, reg, imm2);
-        }
-        else
-        {
-            imm2 = splitLow(imm >> 48);
-            emit->emitIns_R_I(INS_lui, EA_PTRSIZE, reg, imm2);
-            imm2 = splitLow(imm >> 32);
-            emit->emitIns_R_R_I(INS_ori, EA_PTRSIZE, reg, reg, imm2);
-
-            // dsll(reg, reg, 16);
-            emit->emitIns_R_R_I(INS_dsll, EA_PTRSIZE, reg, reg, 16);
-            imm2 = splitLow(imm >> 16);
-            emit->emitIns_R_R_I(INS_ori, EA_PTRSIZE, reg, reg, imm2);
-
-            // dsll(reg, reg, 16);
-            emit->emitIns_R_R_I(INS_dsll, EA_PTRSIZE, reg, reg, 16);
-            imm2 = splitLow(imm);
-            emit->emitIns_R_R_I(INS_ori, EA_PTRSIZE, reg, reg, imm2);
-        }
-    }
+    set_Reg_To_Imm(emit, size, reg, imm);
 
     regSet.verifyRegUsed(reg);
 }
@@ -4002,154 +3999,104 @@ void CodeGen::genCodeForCompare(GenTree* tree, bool IsJump)
                 GenTreeIntConCommon* intConst = op2->AsIntConCommon();
                 ssize_t imm = intConst->IconValue();
 
-                if ((-32768<=imm) && (imm<32767))
+                if (IsUnsigned)
                 {
-                    if (treeOp->OperIs(GT_CMP))
+                    switch (cmpSize)
                     {
-                        assert(!"------------should comfirm.");
-                        //emit->emitIns_R_R_I(IsUnsigned ? INS_sltiu : INS_slti, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, imm);
-                    }
-                    else if (treeOp->OperIs(GT_LT))
-                    {
-                        emit->emitIns_R_R_I(IsUnsigned ? INS_sltiu : INS_slti, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, imm);
-                    }
-                    else if (treeOp->OperIs(GT_LE))
-                    {
-                        emit->emitIns_R_R_I(IsUnsigned ? INS_ori : INS_daddiu, EA_PTRSIZE, REG_AT, REG_R0, imm);
-
-                        emit->emitIns_R_R_R(IsUnsigned ? INS_sltu : INS_slt, EA_PTRSIZE, SaveCcResultReg, REG_AT, op1->gtRegNum);
-
-                        emit->emitIns_R_R_I(INS_xori, EA_PTRSIZE, SaveCcResultReg, SaveCcResultReg, 1);
-                    }
-                    else if (treeOp->OperIs(GT_GT))
-                    {
-                        emit->emitIns_R_R_I(IsUnsigned ? INS_ori : INS_daddiu, EA_PTRSIZE, REG_AT, REG_R0, imm);
-
-                        emit->emitIns_R_R_R(IsUnsigned ? INS_sltu : INS_slt, EA_PTRSIZE, SaveCcResultReg, REG_AT, op1->gtRegNum);
-                    }
-                    else if (treeOp->OperIs(GT_GE))
-                    {
-                        emit->emitIns_R_R_I(IsUnsigned ? INS_sltiu : INS_slti, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, imm);
-
-                        emit->emitIns_R_R_I(INS_xori, EA_PTRSIZE, SaveCcResultReg, SaveCcResultReg, 1);
-                    }
-                    else if (treeOp->OperIs(GT_NE))
-                    {
-                        if (imm)
-                        {
-                            emit->emitIns_R_R_I(IsUnsigned ? INS_ori : INS_daddiu, EA_PTRSIZE, REG_AT, REG_R0, imm);
-
-                            emit->emitIns_R_R_R(INS_xor, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, REG_AT);
-
-                            emit->emitIns_R_R_R(INS_sltu, EA_PTRSIZE, SaveCcResultReg, REG_R0, SaveCcResultReg);
-                        }
-                        else
-                        {
-                            emit->emitIns_R_R_R(INS_sltu, EA_PTRSIZE, SaveCcResultReg, REG_R0, op1->gtRegNum);
-                        }
-                    }
-                    else if (treeOp->OperIs(GT_EQ))
-                    {
-                        if (imm)
-                        {
-                            emit->emitIns_R_R_I(IsUnsigned ? INS_ori : INS_daddiu, EA_PTRSIZE, REG_AT, REG_R0, imm);
-
-                            emit->emitIns_R_R_R(INS_xor, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, REG_AT);
-
-                            emit->emitIns_R_R_I(INS_sltiu, EA_PTRSIZE, SaveCcResultReg, SaveCcResultReg, 1);
-                        }
-                        else
-                        {
-                            emit->emitIns_R_R_I(INS_sltiu, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, 1);
-                        }
+                    case EA_1BYTE:
+                        imm = static_cast<uint8_t>(imm);
+                        break;
+                    case EA_2BYTE:
+                        imm = static_cast<uint16_t>(imm);
+                        break;
+                    case EA_4BYTE:
+                        imm = static_cast<uint32_t>(imm);
+                        break;
+                    default:
+                        break;
                     }
                 }
-                else
+
+                if (treeOp->OperIs(GT_CMP))
                 {
-                    ssize_t imm2 = 0;
+                    assert(!"------------should comfirm.");
+                    //emit->emitIns_R_R_I(IsUnsigned ? INS_sltiu : INS_slti, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, imm);
+                }
+                else if (treeOp->OperIs(GT_LT))
+                {
                     if (isValidSimm16(imm))
                     {
-                        emit->emitIns_R_R_I(INS_addiu, EA_4BYTE, REG_AT, REG_R0, imm);
-                    }
-                    else if (isValidSimm16(imm >> 16))
-                    {
-                        imm2 = splitLow(imm >> 16);
-                        emit->emitIns_R_I(INS_lui, EA_PTRSIZE, REG_AT, imm2);
-                        imm2 = splitLow(imm);
-                        emit->emitIns_R_R_I(INS_ori, EA_PTRSIZE, REG_AT, REG_AT, imm2);
-                    }
-                    else if (isValidSimm16(imm >> 32))
-                    {
-                        imm2 = splitLow(imm >> 32);
-                        emit->emitIns_R_I(INS_lui, EA_PTRSIZE, REG_AT, imm2);
-                        imm2 = splitLow(imm >> 16);
-                        emit->emitIns_R_R_I(INS_ori, EA_PTRSIZE, REG_AT, REG_AT, imm2);
-
-                        // dsll(reg, reg, 16);
-                        emit->emitIns_R_R_I(INS_dsll, EA_PTRSIZE, REG_AT, REG_AT, 16);
-                        imm2 = splitLow(imm);
-                        emit->emitIns_R_R_I(INS_ori, EA_PTRSIZE, REG_AT, REG_AT, imm2);
+                        emit->emitIns_R_R_I(IsUnsigned ? INS_sltiu : INS_slti, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, imm);
                     }
                     else
                     {
-                        imm2 = splitLow(imm >> 48);
-                        emit->emitIns_R_I(INS_lui, EA_PTRSIZE, REG_AT, imm2);
-                        imm2 = splitLow(imm >> 32);
-                        emit->emitIns_R_R_I(INS_ori, EA_PTRSIZE, REG_AT, REG_AT, imm2);
+                        set_Reg_To_Imm(emit, EA_PTRSIZE, REG_AT, imm);
+                        emit->emitIns_R_R_R(IsUnsigned ? INS_sltu : INS_slt, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, REG_AT);
+                    }
+                }
+                else if (treeOp->OperIs(GT_LE))
+                {
+                    set_Reg_To_Imm(emit, EA_PTRSIZE, REG_AT, imm);
 
-                        // dsll(reg, reg, 16);
-                        emit->emitIns_R_R_I(INS_dsll, EA_PTRSIZE, REG_AT, REG_AT, 16);
-                        imm2 = splitLow(imm >> 16);
-                        emit->emitIns_R_R_I(INS_ori, EA_PTRSIZE, REG_AT, REG_AT, imm2);
+                    emit->emitIns_R_R_R(IsUnsigned ? INS_sltu : INS_slt, EA_PTRSIZE, SaveCcResultReg, REG_AT, op1->gtRegNum);
 
-                        // dsll(reg, reg, 16);
-                        emit->emitIns_R_R_I(INS_dsll, EA_PTRSIZE, REG_AT, REG_AT, 16);
-                        imm2 = splitLow(imm);
-                        emit->emitIns_R_R_I(INS_ori, EA_PTRSIZE, REG_AT, REG_AT, imm2);
+                    emit->emitIns_R_R_I(INS_xori, EA_PTRSIZE, SaveCcResultReg, SaveCcResultReg, 1);
+                }
+                else if (treeOp->OperIs(GT_GT))
+                {
+                    set_Reg_To_Imm(emit, EA_PTRSIZE, REG_AT, imm);
+
+                    emit->emitIns_R_R_R(IsUnsigned ? INS_sltu : INS_slt, EA_PTRSIZE, SaveCcResultReg, REG_AT, op1->gtRegNum);
+                }
+                else if (treeOp->OperIs(GT_GE))
+                {
+                    if (isValidSimm16(imm))
+                    {
+                        emit->emitIns_R_R_I(IsUnsigned ? INS_sltiu : INS_slti, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, imm);
+                    }
+                    else
+                    {
+                        set_Reg_To_Imm(emit, EA_PTRSIZE, REG_AT, imm);
+
+                        emit->emitIns_R_R_R(IsUnsigned ? INS_sltu : INS_slt, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, REG_AT);
                     }
 
-                    if (treeOp->OperIs(GT_CMP))
+                    emit->emitIns_R_R_I(INS_xori, EA_PTRSIZE, SaveCcResultReg, SaveCcResultReg, 1);
+                }
+                else if (treeOp->OperIs(GT_NE))
+                {
+                    if (imm)
                     {
-                        //emit->emitIns_R_R_R(IsUnsigned ? INS_sltu : INS_slt, regs, ));
-                        assert(!"------------should comfirm-2.");
-                    }
-                    else if (treeOp->OperIs(GT_LT))
-                    {
-                        emit->emitIns_R_R_R(IsUnsigned ? INS_sltu : INS_slt, EA_8BYTE, SaveCcResultReg, op1->gtRegNum, REG_AT);
-                    }
-                    else if (treeOp->OperIs(GT_LE))
-                    {
-                        emit->emitIns_R_R_R(IsUnsigned ? INS_sltu : INS_slt, EA_8BYTE, SaveCcResultReg, REG_AT, op1->gtRegNum);
+                        set_Reg_To_Imm(emit, EA_PTRSIZE, REG_AT, imm);
 
-                        emit->emitIns_R_R_I(INS_xori, EA_PTRSIZE, SaveCcResultReg, SaveCcResultReg, 1);
-                    }
-                    else if (treeOp->OperIs(GT_GT))
-                    {
-                        emit->emitIns_R_R_R(IsUnsigned ? INS_sltu : INS_slt, EA_8BYTE, SaveCcResultReg, REG_AT, op1->gtRegNum);
-                    }
-                    else if (treeOp->OperIs(GT_GE))
-                    {
-                        emit->emitIns_R_R_R(IsUnsigned ? INS_sltu : INS_slt, EA_8BYTE, SaveCcResultReg, op1->gtRegNum, REG_AT);
-
-                        emit->emitIns_R_R_I(INS_xori, EA_PTRSIZE, SaveCcResultReg, SaveCcResultReg, 1);
-                    }
-                    else if (treeOp->OperIs(GT_NE))
-                    {
                         emit->emitIns_R_R_R(INS_xor, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, REG_AT);
 
                         emit->emitIns_R_R_R(INS_sltu, EA_PTRSIZE, SaveCcResultReg, REG_R0, SaveCcResultReg);
                     }
-                    else if (treeOp->OperIs(GT_EQ))
+                    else
                     {
+                        emit->emitIns_R_R_R(INS_sltu, EA_PTRSIZE, SaveCcResultReg, REG_R0, op1->gtRegNum);
+                    }
+                }
+                else if (treeOp->OperIs(GT_EQ))
+                {
+                    if (imm)
+                    {
+                        set_Reg_To_Imm(emit, EA_PTRSIZE, REG_AT, imm);
+
                         emit->emitIns_R_R_R(INS_xor, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, REG_AT);
 
                         emit->emitIns_R_R_I(INS_sltiu, EA_PTRSIZE, SaveCcResultReg, SaveCcResultReg, 1);
                     }
                     else
                     {
-                        /* FIXME for MIPS: Not Implements. */
-                        __asm__ volatile (" break \n\t  sh $3, 8($0) \n");
+                        emit->emitIns_R_R_I(INS_sltiu, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, 1);
                     }
+                }
+                else
+                {
+                    /* FIXME for MIPS: Not Implements. */
+                    __asm__ volatile (" break \n\t  sh $3, 8($0) \n");
                 }
             }
             else
