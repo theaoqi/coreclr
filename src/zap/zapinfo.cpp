@@ -3561,7 +3561,7 @@ void ZapInfo::getMIPS64PassStructInRegisterDescriptor(
     /*IN*/  CORINFO_CLASS_HANDLE _structHnd,
     /*OUT*/ MIPS64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR* structPassInRegDescPtr)
 {
-    assert(!"unimplemented on MIPS yet");
+    return m_pEEJitInfo->getMIPS64PassStructInRegisterDescriptor(_structHnd, structPassInRegDescPtr);
 }
 
 unsigned ZapInfo::getClassNumInstanceFields(CORINFO_CLASS_HANDLE cls)

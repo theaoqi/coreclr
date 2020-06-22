@@ -31,6 +31,7 @@ baseservices/threading/paramthreadstart/ThreadStartString/ThreadStartString.exe
 baseservices/threading/paramthreadstart/ThreadStartUInt/ThreadStartUInt.exe
 baseservices/threading/paramthreadstart/ThreadStartULong/ThreadStartULong.exe
 baseservices/threading/paramthreadstart/ThreadStartUShort/ThreadStartUShort.exe
+baseservices/threading/regressions/beta2/437017/437017.exe
 baseservices/threading/semaphore/ctoropen/semaphorector1/semaphorector1.exe
 baseservices/threading/semaphore/ctoropen/semaphorectorneg1/semaphorectorneg1.exe
 baseservices/threading/semaphore/ctoropen/semaphorectorneg2/semaphorectorneg2.exe
@@ -41,7 +42,6 @@ baseservices/threading/waithandle/waitall/waitallex9a/waitallex9a.exe
 baseservices/threading/waithandle/waitany/waitanyex10a/waitanyex10a.exe
 baseservices/threading/waithandle/waitany/waitanyex6a/waitanyex6a.exe
 baseservices/threading/waithandle/waitany/waitanyex9a/waitanyex9a.exe
-baseservices/TieredCompilation/TieredVtableMethodTests/TieredVtableMethodTests.exe
 GC/API/GC/Collect_Default_1/Collect_Default_1.exe
 GC/API/GC/Collect_Default_2/Collect_Default_2.exe
 GC/API/GC/Collect_Default_3/Collect_Default_3.exe
@@ -57,7 +57,10 @@ GC/API/WeakReference/multipleWRs/multipleWRs.exe
 GC/Coverage/271010/271010.exe
 GC/Features/BackgroundGC/concurrentspin2/concurrentspin2.exe
 GC/Features/BackgroundGC/foregroundgc/foregroundgc.exe
+GC/Features/HeapExpansion/bestfit_1/bestfit_1.exe
+GC/Features/HeapExpansion/bestfit/bestfit.exe
 GC/Features/HeapExpansion/bestfit-finalize/bestfit-finalize.exe
+GC/Features/HeapExpansion/bestfit-threaded/bestfit-threaded.exe
 GC/Features/LOHCompaction/lohcompactapi2/lohcompactapi2.exe #12471 blocked on mips64
 GC/Features/LOHCompaction/lohcompactapi/lohcompactapi.exe
 GC/Features/LOHCompaction/lohcompactscenariorepro/lohcompactscenariorepro.exe
@@ -120,7 +123,6 @@ ilasm/System/Runtime/CompilerServices/MethodImplOptionsTests/MethodImplOptionsTe
 Interop/COM/Reflection/Reflection/Reflection.exe
 Interop/ExecInDefAppDom/ExecInDefAppDom/ExecInDefAppDom.exe
 Interop/PInvoke/DllImportPath/DllImportPathTest/DllImportPathTest.exe
-JIT/CheckProjects/CheckProjects/CheckProjects.exe
 JIT/Directed/arglist/vararg/vararg.exe
 JIT/Directed/forceinlining/AttributeConflict/AttributeConflict.exe
 JIT/Directed/forceinlining/PositiveCases/PositiveCases.exe
@@ -129,22 +131,16 @@ JIT/Directed/PREFIX/unaligned/1/arglist/arglist.exe
 JIT/Directed/PREFIX/unaligned/2/arglist/arglist.exe
 JIT/Directed/PREFIX/unaligned/4/arglist/arglist.exe
 JIT/Directed/PREFIX/volatile/1/arglist/arglist.exe
-JIT/IL_Conformance/Old/Conformance_Base/conv_ovf_i8_i/conv_ovf_i8_i.exe #13224 should be disabled on mips64
 JIT/jit64/mcc/interop/mcc_i00/mcc_i00.exe
 JIT/jit64/opt/rngchk/ArrayWithThread_o/ArrayWithThread_o.exe
 JIT/jit64/opt/rngchk/RngchkStress3/RngchkStress3.exe
 JIT/jit64/regress/ddb/87766/ddb87766/ddb87766.exe
 JIT/jit64/regress/vsw/102754/test1/test1.exe
-JIT/Methodical/Arrays/misc/_il_relgcarr/_il_relgcarr.exe
 JIT/Methodical/Coverage/arglist_pos/arglist_pos.exe
-JIT/Methodical/explicit/rotate/_il_relrotate_i4/_il_relrotate_i4.exe
-JIT/Methodical/explicit/rotate/_il_relrotate_u2/_il_relrotate_u2.exe
 JIT/Methodical/flowgraph/dev10_bug679955/volatileLocal1/volatileLocal1.exe  #12015 known problem
 JIT/Methodical/refany/_il_dbgseq/_il_dbgseq.exe
 JIT/Methodical/refany/_il_relseq/_il_relseq.exe
-JIT/Methodical/tailcall/Desktop/_il_relthread-race/_il_relthread-race.exe #12471 blocked on mips64
 JIT/opt/ObjectStackAllocation/ObjectStackAllocationTests/ObjectStackAllocationTests.exe
-JIT/Performance/CodeQuality/Bytemark/Bytemark/Bytemark.exe
 JIT/Performance/CodeQuality/Roslyn/CscBench/CscBench.exe
 JIT/Performance/CodeQuality/V8/Crypto/Crypto/Crypto.exe
 JIT/Regression/CLR-x86-EJIT/V1-M12-Beta2/b26323/b26323/b26323.exe
@@ -158,7 +154,6 @@ JIT/Regression/CLR-x86-JIT/v2.1/DDB/b175679/b175679/b175679.exe
 JIT/Regression/JitBlue/DevDiv_461649/DevDiv_461649/DevDiv_461649.exe
 JIT/Regression/JitBlue/GitHub_22583/GitHub_22583/GitHub_22583.exe
 JIT/Regression/VS-ia64-JIT/V1.2-M01/b10827/b10827/b10827.exe
-JIT/superpmi/superpmicollect/Bytemark.exe
 JIT/superpmi/superpmicollect/superpmicollect.exe
 Loader/AssemblyDependencyResolver/MissingHostPolicyTests/MissingHostPolicyTests/MissingHostPolicyTests.exe
 Loader/regressions/polyrec/Polyrec/Polyrec.exe
@@ -170,9 +165,5 @@ readytorun/tests/mainv2/mainv2.exe
 Regressions/coreclr/GitHub_22888/test22888resources/test22888resources.exe
 Regressions/coreclr/GitHub_22888/test22888/test22888resources.exe
 sizeondisk/sodbench/SoDBench/SoDBench.exe
-tracing/eventcounter/incrementingpollingcounter/incrementingpollingcounter.exe
 tracing/eventcounter/pollingcounter/pollingcounter.exe
-tracing/eventlistener/eventlistener/eventlistener.exe
-tracing/eventsource/eventsourcetrace/eventsourcetrace/eventsourcetrace.exe
 tracing/tracecontrol/tracecontrol/tracecontrol.exe
-tracing/tracevalidation/tracelogging/tracelogging/tracelogging.exe

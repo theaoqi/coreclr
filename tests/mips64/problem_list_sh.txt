@@ -4,12 +4,9 @@
 baseservices/exceptions/regressions/Dev11/154243/dynamicmethodliveness/dynamicmethodliveness.sh mips64  #12739 failed on mips64
 baseservices/threading/interlocked/compareexchange/CompareExchangeTClass_1/CompareExchangeTClass_1.sh mips64  #12739 failed on mips64
 baseservices/threading/interlocked/compareexchange/CompareExchangeTString/CompareExchangeTString.sh mips64  #12739 failed on mips64
-baseservices/TieredCompilation/TieredVtableMethodTests/TieredVtableMethodTests.sh mips64  #12739 failed on mips64
 CoreMangLib/system/span/RefStructWithSpan/RefStructWithSpan.sh mips64  #12739 failed on mips64
-GC/API/GC/GetTotalAllocatedBytes/GetTotalAllocatedBytes.sh mips64  #12739 failed on mips64
 GC/API/GCHandleCollector/Usage/Usage.sh mips64  #12739 failed on mips64
 GC/Coverage/271010/271010.sh x64 mips64 #12863 failed item on x64 and mips64
-GC/Features/BackgroundGC/foregroundgc/foregroundgc.sh mips64  #12739 failed on mips64
 GC/Features/HeapExpansion/bestfit-finalize/bestfit-finalize.sh mips64  #12739 failed on mips64
 GC/Features/LOHFragmentation/lohfragmentation/lohfragmentation.sh x64 mips64 #12863 failed item on x64 and mips64
 GC/LargeMemory/Allocation/finalizertest/finalizertest.sh x64 mips64 #12863 failed item on x64 and mips64
@@ -19,10 +16,8 @@ GC/Regressions/dev10bugs/536168/536168/536168.sh x64 mips64 #12863 failed item o
 GC/Scenarios/BinTree/thdtreegrowingobj/thdtreegrowingobj.sh mips64  #12739 failed on mips64
 GC/Scenarios/DoublinkList/dlbigleakthd/dlbigleakthd.sh mips64  #12739 failed on mips64
 GC/Scenarios/DoublinkList/dlbigleakthd_v2/dlbigleakthd_v2.sh mips64  #12739 failed on mips64
-GC/Scenarios/FinalizeTimeout/FinalizeTimeout/FinalizeTimeout.sh mips64  #12739 failed on mips64
 Interop/ExecInDefAppDom/ExecInDefAppDom/ExecInDefAppDom.sh x64 mips64 #12863 failed item on x64 and mips64
 Interop/NativeCallable/NativeCallableTest/NativeCallableTest.sh mips64  #12725 blocked on mips64
-JIT/CheckProjects/CheckProjects/CheckProjects.sh mips64  #12739 failed on mips64
 JIT/Directed/arglist/vararg/vararg.sh x64 mips64 #12863 failed item on x64 and mips64
 JIT/Directed/Misc/function_pointer/MutualThdRecur-fptr/MutualThdRecur-fptr.sh mips64  #12725 blocked on mips64
 JIT/Directed/PREFIX/unaligned/1/arglist/arglist.sh x64 mips64 #12863 failed item on x64 and mips64
@@ -32,16 +27,11 @@ JIT/Directed/PREFIX/volatile/1/arglist/arglist.sh x64 mips64 #12863 failed item 
 JIT/IL_Conformance/Old/Conformance_Base/conv_ovf_i8_i/conv_ovf_i8_i.sh mips64  #12739 failed on mips64
 JIT/jit64/mcc/interop/mcc_i00/mcc_i00.sh x64 mips64 #12863 failed item on x64 and mips64
 JIT/jit64/opt/rngchk/ArrayWithThread_o/ArrayWithThread_o.sh mips64  #12739 failed on mips64
-JIT/Methodical/Arrays/misc/_il_relgcarr/_il_relgcarr.sh mips64  #12739 failed on mips64
 JIT/Methodical/Coverage/arglist_pos/arglist_pos.sh x64 mips64 #12863 failed item on x64 and mips64
-JIT/Methodical/explicit/rotate/_il_relrotate_i4/_il_relrotate_i4.sh mips64  #12739 failed on mips64
-JIT/Methodical/explicit/rotate/_il_relrotate_u2/_il_relrotate_u2.sh mips64  #12739 failed on mips64
 JIT/Methodical/flowgraph/dev10_bug679955/volatileLocal1/volatileLocal1.sh mips64  #12739 failed on mips64
 JIT/Methodical/refany/_il_dbgseq/_il_dbgseq.sh x64 mips64 #12863 failed item on x64 and mips64
 JIT/Methodical/refany/_il_relseq/_il_relseq.sh x64 mips64 #12863 failed item on x64 and mips64
-JIT/opt/ObjectStackAllocation/ObjectStackAllocationTests/ObjectStackAllocationTests.sh mips64  #12739 failed on mips64
 JIT/Performance/CodeQuality/BenchmarksGame/regex-redux/regex-redux-5/regex-redux-5.sh mips64  #12739 failed on mips64
-JIT/Performance/CodeQuality/Bytemark/Bytemark/Bytemark.sh mips64  #12739 failed on mips64
 JIT/Performance/CodeQuality/Roslyn/CscBench/CscBench.sh mips64  #12739 failed on mips64
 JIT/Performance/CodeQuality/V8/Crypto/Crypto/Crypto.sh mips64  #12739 failed on mips64
 JIT/Regression/CLR-x86-EJIT/V1-M12-Beta2/b26323/b26323/b26323.sh x64 mips64 #12863 failed item on x64 and mips64
@@ -52,21 +42,14 @@ JIT/Regression/CLR-x86-JIT/V1-M12-Beta2/b37646/b37646/b37646.sh x64 mips64 #1286
 JIT/Regression/CLR-x86-JIT/V1-M12-Beta2/b41852/b41852/b41852.sh x64 mips64 #12863 failed item on x64 and mips64
 JIT/Regression/CLR-x86-JIT/v2.1/DDB/b175679/b175679/b175679.sh mips64  #12739 failed on mips64
 JIT/Regression/JitBlue/GitHub_11408/GitHub_11408/GitHub_11408.sh x64 mips64 #12863 failed item on x64 and mips64
-JIT/Regression/JitBlue/GitHub_19438/GitHub_19438/GitHub_19438.sh mips64  #12739 failed on mips64
 JIT/Regression/VS-ia64-JIT/V1.2-M01/b10827/b10827/b10827.sh mips64  #12739 failed on mips64
-JIT/superpmi/superpmicollect/Bytemark.sh mips64  #12739 failed on mips64
 JIT/superpmi/superpmicollect/superpmicollect.sh x64 mips64 #12863 failed item on x64 and mips64
 Loader/AssemblyDependencyResolver/MissingHostPolicyTests/MissingHostPolicyTests/MissingHostPolicyTests.sh x64 mips64 #12863 failed item on x64 and mips64
 readytorun/DynamicMethodGCStress/DynamicMethodGCStress/DynamicMethodGCStress.sh mips64  #12739 failed on mips64
 readytorun/tests/fileversionpreservation/fileversionpreservation/fileversionpreservation.sh mips64  #12739 failed on mips64
+readytorun/tests/genericsload/callgenericctor/callgenericctor.sh  #12739 failed on mips64
+readytorun/tests/genericsload/usegenericfield/usegenericfield.sh  #12739 failed on mips64
 readytorun/tests/mainv1/mainv1.sh mips64  #12739 failed on mips64
 readytorun/tests/mainv2/mainv2.sh mips64  #12739 failed on mips64
-reflection/DefaultInterfaceMethods/Emit/Emit.sh mips64  #12739 failed on mips64
-reflection/Tier1Collectible/Tier1Collectible/Tier1Collectible.sh mips64  #12739 failed on mips64
-Regressions/common/AboveStackLimit/AboveStackLimit.sh mips64  #12739 failed on mips64
-Regressions/coreclr/0099/AboveStackLimit/AboveStackLimit.sh mips64  #12739 failed on mips64
-tracing/eventcounter/incrementingpollingcounter/incrementingpollingcounter.sh mips64  #12739 failed on mips64
 tracing/eventcounter/pollingcounter/pollingcounter.sh mips64  #12739 failed on mips64
-tracing/eventlistener/eventlistener/eventlistener.sh mips64  #12739 failed on mips64
 tracing/tracecontrol/tracecontrol/tracecontrol.sh x64 mips64 #12863 failed item on x64 and mips64
-tracing/tracevalidation/tracelogging/tracelogging/tracelogging.sh mips64  #12739 failed on mips64

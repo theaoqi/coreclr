@@ -2346,7 +2346,7 @@ inline bool isFloatRegType(var_types type)
 C_ASSERT((RBM_ALLINT & RBM_SPBASE) == RBM_NONE);
 C_ASSERT((RBM_INT_CALLEE_SAVED & RBM_SPBASE) == RBM_NONE);
 
-#if defined(ETW_EBP_FRAMED) && !defined(_TARGET_MIPS64_)
+#if ETW_EBP_FRAMED && !defined(_TARGET_MIPS64_)
 // Frame pointer isn't either if we're supporting ETW frame chaining
 C_ASSERT((RBM_ALLINT & RBM_FPBASE) == RBM_NONE);
 C_ASSERT((RBM_INT_CALLEE_SAVED & RBM_FPBASE) == RBM_NONE);

@@ -1514,20 +1514,12 @@ void CodeGen::instGen_Set_Reg_To_Imm(emitAttr size, regNumber reg, ssize_t imm, 
 
     // reg cannot be a FP register
     assert(!genIsValidFloatReg(reg));
-    if (!compiler->opts.compReloc)
-    {
-        size = EA_SIZE(size); // Strip any Reloc flags from size if we aren't doing relocs
-    }
+
+    size = EA_SIZE(size); // Strip any Reloc flags from size if we aren doing relocs.
 
     emitter* emit = getEmitter();
 
-    if (EA_IS_RELOC(size))
-    {
-        assert(!"unimplemented yet on MIPS yet");
-        // This emits a pair of adrp/add (two instructions) with fix-ups.
-        //getEmitter()->emitIns_R_AI(INS_adrp, size, reg, imm);
-    }
-    else if (imm == 0)
+    if (imm == 0)
     {
         instGen_Set_Reg_To_Zero(size, reg, flags);
     }
@@ -4433,11 +4425,8 @@ void CodeGen::genEmitHelperCall(unsigned helper, int argSize, emitAttr retSize, 
 
         callTarget = callTargetReg;
 
-        /* FIXME for MIPS */
-        // adrp + add with relocations will be emitted
-        assert(!"unimplemented on MIPS yet");
-        //getEmitter()->emitIns_R_AI(INS_, EA_PTR_DSP_RELOC, callTarget, (ssize_t)pAddr);
-        getEmitter()->emitIns_R_R(INS_ld, EA_PTRSIZE, callTarget, callTarget);
+        instGen_Set_Reg_To_Imm(EA_PTRSIZE, callTarget, (ssize_t)pAddr);
+        getEmitter()->emitIns_R_R_I(INS_ld, EA_PTRSIZE, callTarget, callTarget, 0);
         callType = emitter::EC_INDIR_R;
     }
 
@@ -8461,11 +8450,13 @@ void CodeGen::genCodeForCpBlkUnroll(GenTreeBlk* cpBlkNode)
             // Load
             if (srcAddr->OperIsLocalAddr())
             {
-                if (srcAddr->gtOper == GT_LCL_FLD_ADDR)
-                    offset += srcAddr->gtLclFld.gtLclOffs;
+                unsigned lclOffs = 0;
 
-                emit->emitIns_R_S(INS_ld, EA_8BYTE, tmpReg, srcAddr->gtLclVarCommon.gtLclNum, offset);
-                emit->emitIns_R_S(INS_ld, EA_8BYTE, tmp2Reg, srcAddr->gtLclVarCommon.gtLclNum, offset+8);
+                if (srcAddr->gtOper == GT_LCL_FLD_ADDR)
+                    lclOffs += srcAddr->gtLclFld.gtLclOffs;
+
+                emit->emitIns_R_S(INS_ld, EA_8BYTE, tmpReg, srcAddr->gtLclVarCommon.gtLclNum, offset + lclOffs);
+                emit->emitIns_R_S(INS_ld, EA_8BYTE, tmp2Reg, srcAddr->gtLclVarCommon.gtLclNum, offset + lclOffs + 8);
             }
             else
             {
@@ -8476,11 +8467,13 @@ void CodeGen::genCodeForCpBlkUnroll(GenTreeBlk* cpBlkNode)
             // Store
             if (dstAddr->OperIsLocalAddr())
             {
-                if (dstAddr->gtOper == GT_LCL_FLD_ADDR)
-                    offset += dstAddr->gtLclFld.gtLclOffs;
+                unsigned lclOffs = 0;
 
-                emit->emitIns_S_R(INS_sd, EA_8BYTE, tmpReg, dstAddr->gtLclVarCommon.gtLclNum, offset);
-                emit->emitIns_S_R(INS_sd, EA_8BYTE, tmp2Reg, dstAddr->gtLclVarCommon.gtLclNum, offset+8);
+                if (dstAddr->gtOper == GT_LCL_FLD_ADDR)
+                    lclOffs += dstAddr->gtLclFld.gtLclOffs;
+
+                emit->emitIns_S_R(INS_sd, EA_8BYTE, tmpReg, dstAddr->gtLclVarCommon.gtLclNum, offset + lclOffs);
+                emit->emitIns_S_R(INS_sd, EA_8BYTE, tmp2Reg, dstAddr->gtLclVarCommon.gtLclNum, offset+ lclOffs + 8);
             }
             else
             {
@@ -9128,21 +9121,25 @@ void CodeGen::genJmpMethod(GenTree* jmp)
             {
                 regNumber reg = REG_NA;
 
-                //if (varTypeIsStruct(varDsc))
-                //    // Must be <= 16 bytes or else it wouldn't be passed in registers, except for HFA,
-                //    // which can be bigger (and is handled above).
-                //    noway_assert(EA_SIZE_IN_BYTES(varDsc->lvSize()) <= 16);
-                //    loadType = compiler->getJitGCType(varDsc->lvGcLayout[0]);
-                if (structDesc.IsDoubleSlot(i))
+                CorInfoGCType currentGcLayoutType = (CorInfoGCType)varDsc->lvGcLayout[i];
+                if (currentGcLayoutType == TYPE_GC_NONE)
                 {
-                    reg = genMapFloatRegArgNumToRegNum(regArgNum + i);
-                    regType = TYP_DOUBLE;
+                    if (structDesc.IsDoubleSlot(i))
+                    {
+                        reg = genMapFloatRegArgNumToRegNum(regArgNum + i);
+                        regType = TYP_DOUBLE;
+                    }
+                    else
+                    {
+                        //assert(structDesc.IsValidSlot(i));
+                        reg = genMapIntRegArgNumToRegNum(regArgNum + i);
+                        regType = TYP_I_IMPL;
+                    }
                 }
                 else
                 {
-                    //assert(structDesc.IsValidSlot(i));
                     reg = genMapIntRegArgNumToRegNum(regArgNum + i);
-                    regType = TYP_I_IMPL;
+                    regType = compiler->getJitGCType(currentGcLayoutType);
                 }
 
                 if (i == 0)

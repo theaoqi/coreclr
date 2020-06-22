@@ -1982,7 +1982,7 @@ DWORD ZapIndirectHelperThunk::SaveWorker(ZapWriter * pZapWriter)
 {
     ZapImage * pImage = ZapImage::GetImage(pZapWriter);
 
-    BYTE buffer[44];
+    BYTE buffer[64];
     BYTE * p = buffer;
 
 #if defined(_TARGET_X86_)
@@ -2203,6 +2203,98 @@ DWORD ZapIndirectHelperThunk::SaveWorker(ZapWriter * pZapWriter)
 
     // br x12
     *(DWORD *)p = 0xd61f0180;
+    p += 4;
+
+    // [Module*]
+    if (pImage != NULL)
+        pImage->WriteReloc(buffer, (int)(p - buffer), pImage->GetImportTable()->GetHelperImport(READYTORUN_HELPER_Module), 0, IMAGE_REL_BASED_PTR);
+    p += 8;
+
+    // [helper]
+    if (pImage != NULL)
+        pImage->WriteReloc(buffer, (int)(p - buffer), pImage->GetImportTable()->GetHelperImport(GetReadyToRunHelper()), 0, IMAGE_REL_BASED_PTR);
+    p += 8;
+#elif defined(_TARGET_MIPS64_)
+    // ori at, ra, 0
+    *(DWORD*)p = 0x37e10000;
+    p += 4;
+
+    if (IsDelayLoadHelper())
+    {
+        // t8 contains indirection cell
+        // Do nothing t8 contains our first param
+
+        // daddiu t0, zero, index
+        DWORD index = GetSectionIndex();
+        _ASSERTE(index <= 0x7F);
+        *(DWORD*)p = 0x64180000 | index;
+        p += 4;
+
+        // bal +8
+        *(DWORD*)p = 0x04110002;
+        p += 4;
+
+        // nop
+        *(DWORD*)p = 0x00000000;
+        p += 4;
+
+        // move Module* -> t1
+        // ld t1, 32(ra)
+        *(DWORD*)p = 0xdfed0020;
+        p += 4;
+
+        // ld t1, 0(t1)
+        *(DWORD*)p = 0xddad0000;
+        p += 4;
+    }
+    else
+    if (IsLazyHelper())
+    {
+        // nop - for 8byte-aligned
+        *(DWORD*)p = 0x00000000;
+        p += 4;
+
+        // bal +8
+        *(DWORD*)p = 0x04110002;
+        p += 4;
+
+        // nop
+        *(DWORD*)p = 0x00000000;
+        p += 4;
+
+        // Move Module* -> a1
+        // ld a1, 32(ra)
+        *(DWORD*)p = 0xdfe50020;
+        p += 4;
+
+        // ld a1, 0(a1)
+        *(DWORD*)p = 0xdca50000;
+        p += 4;
+    }
+
+    // bal +8
+    *(DWORD*)p = 0x04110002;
+    p += 4;
+
+    // nop
+    *(DWORD*)p = 0x00000000;
+    p += 4;
+
+    // branch to helper
+    // ld t9, 24(ra)
+    *(DWORD*)p = 0xdff90018;
+    p += 4;
+
+    // ld t9, 0(t9)
+    *(DWORD *)p = 0xdf390000;
+    p += 4;
+
+    // jr t9
+    *(DWORD *)p = 0x03200008;
+    p += 4;
+
+    // ori ra, at, 0
+    *(DWORD*)p = 0x343f0000;
     p += 4;
 
     // [Module*]
