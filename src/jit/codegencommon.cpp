@@ -1338,7 +1338,7 @@ AGAIN:
 
         cns += op2->gtIntConCommon.IconValue();
 
-#if defined(_TARGET_ARMARCH_)
+#if defined(_TARGET_ARMARCH_) || defined(_TARGET_MIPS64_)
         if (cns == 0)
 #endif
         {
@@ -1358,7 +1358,7 @@ AGAIN:
 
                     goto AGAIN;
 
-#if SCALED_ADDR_MODES && !defined(_TARGET_ARMARCH_)
+#if SCALED_ADDR_MODES && !defined(_TARGET_ARMARCH_) && !defined(_TARGET_MIPS64_)
                 // TODO-ARM64-CQ, TODO-ARM-CQ: For now we don't try to create a scaled index.
                 case GT_MUL:
                     if (op1->gtOverflow())
@@ -1381,7 +1381,7 @@ AGAIN:
                         goto FOUND_AM;
                     }
                     break;
-#endif // SCALED_ADDR_MODES && !defined(_TARGET_ARMARCH_)
+#endif // SCALED_ADDR_MODES && !defined(_TARGET_ARMARCH_) && !defined(_TARGET_MIPS64_)
 
                 default:
                     break;
@@ -1402,7 +1402,7 @@ AGAIN:
 
     switch (op1->gtOper)
     {
-#if !defined(_TARGET_ARMARCH_)
+#if !defined(_TARGET_ARMARCH_) && !defined(_TARGET_MIPS64_)
         // TODO-ARM64-CQ, TODO-ARM-CQ: For now we don't try to create a scaled index.
         case GT_ADD:
 
@@ -1464,7 +1464,7 @@ AGAIN:
             break;
 
 #endif // SCALED_ADDR_MODES
-#endif // !_TARGET_ARMARCH
+#endif // !_TARGET_ARMARCH && !_TARGET_MIPS64_
 
         case GT_NOP:
 
@@ -1483,7 +1483,7 @@ AGAIN:
     noway_assert(op2);
     switch (op2->gtOper)
     {
-#if !defined(_TARGET_ARMARCH_)
+#if !defined(_TARGET_ARMARCH_) && !defined(_TARGET_MIPS64_)
         // TODO-ARM64-CQ, TODO-ARM-CQ: For now we don't try to create a scaled index.
         case GT_ADD:
 
@@ -1541,7 +1541,7 @@ AGAIN:
             break;
 
 #endif // SCALED_ADDR_MODES
-#endif // !_TARGET_ARMARCH
+#endif // !_TARGET_ARMARCH && !_TARGET_MIPS64_
 
         case GT_NOP:
 
