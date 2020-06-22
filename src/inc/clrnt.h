@@ -1102,16 +1102,8 @@ RtlVirtualUnwind(
 #define IMAGE_FILE_MACHINE_MIPS64             0xDD64  // MIPS64 Little-Endian
 #endif
 
-#ifndef IMAGE_REL_MIPS64_BRANCH26
-#define IMAGE_REL_MIPS64_BRANCH26        0x0003  // 26 bit offset << 2 & sign ext. for B & BL
-#endif
-
-#ifndef IMAGE_REL_MIPS64_PAGEBASE_REL21
-#define IMAGE_REL_MIPS64_PAGEBASE_REL21  0x0004  // ADRP 21 bit PC-relative page address
-#endif
-
-#ifndef IMAGE_REL_MIPS64_PAGEOFFSET_12A
-#define IMAGE_REL_MIPS64_PAGEOFFSET_12A  0x0006  // ADD 12 bit page offset
+#ifndef IMAGE_REL_MIPS64_PC
+#define IMAGE_REL_MIPS64_PC  0x0004
 #endif
 
 #endif // _TARGET_MIPS64_

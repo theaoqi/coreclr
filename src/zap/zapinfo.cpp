@@ -2675,6 +2675,11 @@ void ZapInfo::recordRelocation(void *location, void *target,
         break;
 #endif
 
+#if defined(_TARGET_MIPS64_)
+    case IMAGE_REL_MIPS64_PC:
+        break;
+#endif
+
     default:
         _ASSERTE(!"Unknown reloc type");
         break;
@@ -2794,6 +2799,12 @@ void ZapInfo::recordRelocation(void *location, void *target,
         if (!FitsInRel12(targetOffset))
             ThrowHR(COR_E_OVERFLOW);
         PutArm64Rel12((UINT32 *)location, targetOffset);
+        break;
+#endif
+
+#if defined(_TARGET_MIPS64_)
+    case IMAGE_REL_MIPS64_PC:
+        *(UINT32*)location = targetOffset;
         break;
 #endif
 

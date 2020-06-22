@@ -1375,10 +1375,9 @@ DelayLoad_MethodCall:
     .global DelayLoad_MethodCall
     PROLOG_WITH_TRANSITION_BLOCK
 
-    //FIXME for MIPS: how to get a1-a3 ?
-    //mov a1, x11      // Indirection cell
-    //mov a2, x9       // sectionIndex
-    //mov a3, x10      // Module*
+    ori a1, t8, 0      // Indirection cell
+    ori a2, t0, 0      // sectionIndex
+    ori a3, t1, 0      // Module*
 
     lui  AT, %hi(%neg(%gp_rel(DelayLoad_MethodCall_FakeProlog)))
     daddu  t0, AT, t9

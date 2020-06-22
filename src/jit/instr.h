@@ -277,6 +277,7 @@ enum insOpts : unsigned
     INS_OPTS_J,     // see ::emitIns_J().
     //INS_OPTS_J2,     // see ::emitIns_J().
     INS_OPTS_C,     // see ::emitIns_Call().
+    INS_OPTS_RELOC,     // see ::emitIns_R_AI().
     //INS_OPTS_,     // see ::().
     //INS_OPTS_,     // see ::().
 };

@@ -2214,10 +2214,8 @@ DWORD ZapIndirectHelperThunk::SaveWorker(ZapWriter * pZapWriter)
     if (pImage != NULL)
         pImage->WriteReloc(buffer, (int)(p - buffer), pImage->GetImportTable()->GetHelperImport(GetReadyToRunHelper()), 0, IMAGE_REL_BASED_PTR);
     p += 8;
+
 #elif defined(_TARGET_MIPS64_)
-    // ori at, ra, 0
-    *(DWORD*)p = 0x37e10000;
-    p += 4;
 
     if (IsDelayLoadHelper())
     {
@@ -2227,20 +2225,16 @@ DWORD ZapIndirectHelperThunk::SaveWorker(ZapWriter * pZapWriter)
         // daddiu t0, zero, index
         DWORD index = GetSectionIndex();
         _ASSERTE(index <= 0x7F);
-        *(DWORD*)p = 0x64180000 | index;
-        p += 4;
-
-        // bal +8
-        *(DWORD*)p = 0x04110002;
-        p += 4;
-
-        // nop
-        *(DWORD*)p = 0x00000000;
+        *(DWORD*)p = 0x640c0000 | index;
         p += 4;
 
         // move Module* -> t1
-        // ld t1, 32(ra)
-        *(DWORD*)p = 0xdfed0020;
+        // ld t1, 32(t9)
+        *(DWORD*)p = 0xdf2d0020;
+        p += 4;
+
+        //nop,  only for 8byte-aligned.
+        *(DWORD*)p = 0x0;
         p += 4;
 
         // ld t1, 0(t1)
@@ -2250,21 +2244,9 @@ DWORD ZapIndirectHelperThunk::SaveWorker(ZapWriter * pZapWriter)
     else
     if (IsLazyHelper())
     {
-        // nop - for 8byte-aligned
-        *(DWORD*)p = 0x00000000;
-        p += 4;
-
-        // bal +8
-        *(DWORD*)p = 0x04110002;
-        p += 4;
-
-        // nop
-        *(DWORD*)p = 0x00000000;
-        p += 4;
-
         // Move Module* -> a1
-        // ld a1, 32(ra)
-        *(DWORD*)p = 0xdfe50020;
+        // ld a1, 24(t9)
+        *(DWORD*)p = 0xdf250018;
         p += 4;
 
         // ld a1, 0(a1)
@@ -2272,17 +2254,9 @@ DWORD ZapIndirectHelperThunk::SaveWorker(ZapWriter * pZapWriter)
         p += 4;
     }
 
-    // bal +8
-    *(DWORD*)p = 0x04110002;
-    p += 4;
-
-    // nop
-    *(DWORD*)p = 0x00000000;
-    p += 4;
-
     // branch to helper
-    // ld t9, 24(ra)
-    *(DWORD*)p = 0xdff90018;
+    // ld t9, ??(t9)
+    *(DWORD*)p = 0xdf390000 | ((short)(p - buffer) + 24);
     p += 4;
 
     // ld t9, 0(t9)
@@ -2293,8 +2267,8 @@ DWORD ZapIndirectHelperThunk::SaveWorker(ZapWriter * pZapWriter)
     *(DWORD *)p = 0x03200008;
     p += 4;
 
-    // ori ra, at, 0
-    *(DWORD*)p = 0x343f0000;
+    // nop
+    *(DWORD*)p = 0;
     p += 4;
 
     // [Module*]

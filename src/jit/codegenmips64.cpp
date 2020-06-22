@@ -34,10 +34,10 @@ static bool isValidSimm16(ssize_t value)
     return -( ((int)1) << 15 ) <= value && value < ( ((int)1) << 15 );
 };
 
-static void set_Reg_To_Imm(emitter* emit, emitAttr size, regNumber reg, ssize_t imm)
+static inline void set_Reg_To_Imm(emitter* emit, emitAttr size, regNumber reg, ssize_t imm)
 {
     // reg cannot be a FP register
-    assert(!genIsValidFloatReg(reg));
+    assert(genIsValidIntReg(reg));
 
     size = EA_SIZE(size);
 
@@ -1559,11 +1559,22 @@ void CodeGen::genEHCatchRet(BasicBlock* block)
 
 void CodeGen::instGen_Set_Reg_To_Imm(emitAttr size, regNumber reg, ssize_t imm, insFlags flags)
 {
-    size = EA_SIZE(size); // Strip any Reloc flags from size if we aren doing relocs.
-
     emitter* emit = getEmitter();
 
-    set_Reg_To_Imm(emit, size, reg, imm);
+    if (!compiler->opts.compReloc)
+    {
+        size = EA_SIZE(size); // Strip any Reloc flags from size if we aren't doing relocs.
+    }
+
+    if (EA_IS_RELOC(size))
+    {
+        assert(genIsValidIntReg(reg));
+        emit->emitIns_R_AI(INS_bal, size, reg, imm);//for example: EA_PTR_DSP_RELOC
+    }
+    else
+    {
+        set_Reg_To_Imm(emit, size, reg, imm);
+    }
 
     regSet.verifyRegUsed(reg);
 }
@@ -4372,7 +4383,7 @@ void CodeGen::genEmitHelperCall(unsigned helper, int argSize, emitAttr retSize, 
 
         callTarget = callTargetReg;
 
-        instGen_Set_Reg_To_Imm(EA_PTRSIZE, callTarget, (ssize_t)pAddr);
+        instGen_Set_Reg_To_Imm(EA_PTR_DSP_RELOC, callTarget, (ssize_t)pAddr);
         getEmitter()->emitIns_R_R_I(INS_ld, EA_PTRSIZE, callTarget, callTarget, 0);
         callType = emitter::EC_INDIR_R;
     }
