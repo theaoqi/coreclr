@@ -4106,8 +4106,7 @@ void CodeGen::genCodeForCompare(GenTree* tree, bool IsJump)
                 }
                 else
                 {
-                    /* FIXME for MIPS: Not Implements. */
-                    __asm__ volatile (" break \n\t  sh $3, 8($0) \n");
+                    assert(!"unimplemented on MIPS yet");
                 }
             }
             else
@@ -4149,8 +4148,7 @@ void CodeGen::genCodeForCompare(GenTree* tree, bool IsJump)
                 }
                 else
                 {
-                    /* FIXME for MIPS: Not Implements. */
-                    __asm__ volatile (" break \n\t  sh $3, 8($0) \n");
+                    assert(!"unimplemented on MIPS yet");
                 }
             }
         }

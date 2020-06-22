@@ -2743,11 +2743,7 @@ void emitter::emitIns_R_R_R_I(instruction ins,
                               insOpts     opt /* = INS_OPTS_NONE */,
                               emitAttr    attrReg2 /* = EA_UNKNOWN */)
 {
-#ifdef DEBUG
     assert(!"unimplemented on MIPS yet");
-#else
-    __asm__ volatile (" break \n\t  sw $0, 4($0) \n");
-#endif
 
     /* FIXME for MIPS: not used on mips. */
     regNumber regs[] = {reg1, reg2, reg3};
