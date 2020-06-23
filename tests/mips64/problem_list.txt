@@ -1,7 +1,6 @@
 #
 # Copyright (c) Loongson Technology. All rights reserved.
 #
-baseservices/exceptions/regressions/Dev11/154243/dynamicmethodliveness/dynamicmethodliveness.exe
 baseservices/threading/interlocked/add/CheckAddInt/CheckAddInt.exe
 baseservices/threading/interlocked/add/CheckAddLong/CheckAddLong.exe
 baseservices/threading/interlocked/add/InterlockedAddInt/InterlockedAddInt.exe
@@ -31,7 +30,6 @@ baseservices/threading/paramthreadstart/ThreadStartString/ThreadStartString.exe
 baseservices/threading/paramthreadstart/ThreadStartUInt/ThreadStartUInt.exe
 baseservices/threading/paramthreadstart/ThreadStartULong/ThreadStartULong.exe
 baseservices/threading/paramthreadstart/ThreadStartUShort/ThreadStartUShort.exe
-baseservices/threading/regressions/beta2/437017/437017.exe
 baseservices/threading/semaphore/ctoropen/semaphorector1/semaphorector1.exe
 baseservices/threading/semaphore/ctoropen/semaphorectorneg1/semaphorectorneg1.exe
 baseservices/threading/semaphore/ctoropen/semaphorectorneg2/semaphorectorneg2.exe
@@ -51,15 +49,12 @@ GC/API/GC/Collect_Forced_3/Collect_Forced_3.exe
 GC/API/GC/Collect_Optimized_1/Collect_Optimized_1.exe
 GC/API/GC/Collect_Optimized_2/Collect_Optimized_2.exe
 GC/API/GC/Collect_Optimized_3/Collect_Optimized_3.exe
-GC/API/GCHandleCollector/Usage/Usage.exe
 GC/API/WeakReference/multipleWRs_1/multipleWRs_1.exe
 GC/API/WeakReference/multipleWRs/multipleWRs.exe
 GC/Coverage/271010/271010.exe
 GC/Features/BackgroundGC/concurrentspin2/concurrentspin2.exe
 GC/Features/BackgroundGC/foregroundgc/foregroundgc.exe
-GC/Features/HeapExpansion/bestfit/bestfit.exe
 GC/Features/LOHCompaction/lohcompactapi2/lohcompactapi2.exe #12471 blocked on mips64
-GC/Features/LOHCompaction/lohcompactapi/lohcompactapi.exe
 GC/Features/LOHCompaction/lohcompactscenariorepro/lohcompactscenariorepro.exe
 GC/Features/LOHCompaction/lohcompact_stress/lohcompact_stress.exe
 GC/Features/LOHFragmentation/lohfragmentation/lohfragmentation.exe
@@ -99,19 +94,14 @@ GC/Performance/Tests/XMLReader/XMLReader.exe
 GC/Regressions/dev10bugs/536168/536168/536168.exe
 GC/Regressions/v2.0-beta2/462651/462651/462651.exe
 GC/Scenarios/Affinity/affinitizer/affinitizer.exe
-GC/Scenarios/BinTree/thdtreegrowingobj/thdtreegrowingobj.exe
-GC/Scenarios/DoublinkList/dlbigleakthd/dlbigleakthd.exe #12471 blocked on mips64
-GC/Scenarios/DoublinkList/dlbigleakthd_v2/dlbigleakthd_v2.exe #12471 blocked on mips64
 GC/Scenarios/Dynamo/dynamo/dynamo.exe
 GC/Scenarios/GCSimulator/GCSimulator/GCSimulator.exe
 GC/Scenarios/ServerModel/servermodel/servermodel.exe
 GC/Stress/Framework/ReliabilityFramework/ReliabilityFramework.exe
 GC/Stress/Framework/ReliabilityFramework/Tests/allocationwithpins.exe
-GC/Stress/Framework/ReliabilityFramework/Tests/bestfit-finalize.exe
 GC/Stress/Framework/ReliabilityFramework/Tests/concurrentspin2.exe
 GC/Stress/Framework/ReliabilityFramework/Tests/GCSimulator.exe
 GC/Stress/Framework/ReliabilityFramework/Tests/StressAllocator.exe
-GC/Stress/Framework/ReliabilityFramework/Tests/ThdTreeGrowingObj.exe
 ilasm/System/Runtime/CompilerServices/MethodImplOptionsTests/MethodImplOptionsTests.exe
 Interop/COM/Reflection/Reflection/Reflection.exe
 Interop/ExecInDefAppDom/ExecInDefAppDom/ExecInDefAppDom.exe
@@ -134,7 +124,6 @@ JIT/Methodical/refany/_il_dbgseq/_il_dbgseq.exe
 JIT/Methodical/refany/_il_relseq/_il_relseq.exe
 JIT/opt/ObjectStackAllocation/ObjectStackAllocationTests/ObjectStackAllocationTests.exe
 JIT/Performance/CodeQuality/Roslyn/CscBench/CscBench.exe
-JIT/Performance/CodeQuality/V8/Crypto/Crypto/Crypto.exe
 JIT/Regression/CLR-x86-EJIT/V1-M12-Beta2/b26323/b26323/b26323.exe
 JIT/Regression/CLR-x86-JIT/V1-M09.5-PDC/b16423/b16423/b16423.exe
 JIT/Regression/CLR-x86-JIT/V1-M09/b16102/b16102/b16102.exe
