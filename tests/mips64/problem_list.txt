@@ -58,7 +58,6 @@ GC/Coverage/271010/271010.exe
 GC/Features/BackgroundGC/concurrentspin2/concurrentspin2.exe
 GC/Features/BackgroundGC/foregroundgc/foregroundgc.exe
 GC/Features/HeapExpansion/bestfit/bestfit.exe
-GC/Features/HeapExpansion/bestfit-finalize/bestfit-finalize.exe
 GC/Features/LOHCompaction/lohcompactapi2/lohcompactapi2.exe #12471 blocked on mips64
 GC/Features/LOHCompaction/lohcompactapi/lohcompactapi.exe
 GC/Features/LOHCompaction/lohcompactscenariorepro/lohcompactscenariorepro.exe
