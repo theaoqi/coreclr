@@ -384,7 +384,6 @@ vtable pointer, and finally jumps to the target method at a given slot in the vt
 */
 struct VTableCallStub
 {
-////FIXME for MIPS.
     friend struct VTableCallHolder;
 
     inline size_t size()
@@ -393,30 +392,37 @@ struct VTableCallStub
 
         BYTE* pStubCode = (BYTE *)this;
 
-        int numDataSlots = 0;
+        size_t cbSize = 4;              // First load instruction
 
-        size_t cbSize = 4;              // First ldr instruction
-
-        for (int i = 0; i < 2; i++)
+        if (((*(DWORD*)(&pStubCode[cbSize])) & 0xFFFF0000) == 0xdc210000)
         {
-            if (((*(DWORD*)(&pStubCode[cbSize])) & 0xFFC003FF) == 0xF9400129)
-            {
-                // ldr x9, [x9, #offsetOfIndirection]
-                cbSize += 4;
-            }
-            else
-            {
-                // These 2 instructions used when the indirection offset is >= 0x8000
-                // ldr w10, [PC, #dataOffset]
-                // ldr x9, [x9, x10]
-                numDataSlots++;
-                cbSize += 8;
-            }
+            // ld at, offsetOfIndirection(at)
+            cbSize += 4;
         }
-        return cbSize +
-                4 +                     // Last 'br x9' instruction
-                (numDataSlots * 4) +    // Data slots containing indirection offset values
-                4;                      // Slot value (data storage, not a real instruction)
+        else
+        {
+            // These 3 instructions used when the indirection offset is >= 0x8000
+            // lwu  t3, dataOffset(t9)
+            // daddu at, t3, at
+            // ld at, 0(at)
+            cbSize += 12;
+        }
+
+        if (((*(DWORD*)(&pStubCode[cbSize])) & 0xFFFF0000) == 0xdc390000)
+        {
+            // ld t9, offsetAfterIndirection(at)
+            cbSize += 4;
+        }
+        else
+        {
+            // These 3 instructions used when the indirection offset is >= 0x8000
+            // lwu  t3, dataOffset(t9)
+            // daddu at, t3, at
+            // ld t9, 0(at)
+            cbSize += 12;
+        }
+
+        return cbSize + 12;// add jr ,nop and the slot value.
     }
 
     inline PCODE        entryPoint()        const { LIMITED_METHOD_CONTRACT;  return (PCODE)&_entryPoint[0]; }
@@ -436,7 +442,6 @@ private:
 stubs as necessary.  */
 struct VTableCallHolder
 {
-////FIXME for MIPS.
     void  Initialize(unsigned slot);
 
     VTableCallStub* stub() { LIMITED_METHOD_CONTRACT;  return reinterpret_cast<VTableCallStub *>(this); }
@@ -446,9 +451,9 @@ struct VTableCallHolder
         STATIC_CONTRACT_WRAPPER;
         unsigned offsetOfIndirection = MethodTable::GetVtableOffset() + MethodTable::GetIndexOfVtableIndirection(slot) * TARGET_POINTER_SIZE;
         unsigned offsetAfterIndirection = MethodTable::GetIndexAfterVtableIndirection(slot) * TARGET_POINTER_SIZE;
-        int indirectionsCodeSize = (offsetOfIndirection >= 0x8000 ? 8 : 4) + (offsetAfterIndirection >= 0x8000 ? 8 : 4);
+        int indirectionsCodeSize = (offsetOfIndirection >= 0x8000 ? 12 : 4) + (offsetAfterIndirection >= 0x8000 ? 12 : 4);
         int indirectionsDataSize = (offsetOfIndirection >= 0x8000 ? 4 : 0) + (offsetAfterIndirection >= 0x8000 ? 4 : 0);
-        return 8 + indirectionsCodeSize + indirectionsDataSize + 4;
+        return 12 + indirectionsCodeSize + indirectionsDataSize + 4;
     }
 
     static VTableCallHolder* VTableCallHolder::FromVTableCallEntry(PCODE entry) { LIMITED_METHOD_CONTRACT; return (VTableCallHolder*)entry; }
@@ -476,61 +481,58 @@ ResolveHolder* ResolveHolder::FromResolveEntry(PCODE resolveEntry)
     return resolveHolder;
 }
 
-////FIXME for MIPS.
 void VTableCallHolder::Initialize(unsigned slot)
 {
-    assert(!"unimplemented on MIPS yet");
-
     unsigned offsetOfIndirection = MethodTable::GetVtableOffset() + MethodTable::GetIndexOfVtableIndirection(slot) * TARGET_POINTER_SIZE;
     unsigned offsetAfterIndirection = MethodTable::GetIndexAfterVtableIndirection(slot) * TARGET_POINTER_SIZE;
     _ASSERTE(MethodTable::VTableIndir_t::isRelative == false /* TODO: NYI */);
 
-    int indirectionsCodeSize = (offsetOfIndirection >= 0x8000 ? 8 : 4) + (offsetAfterIndirection >= 0x8000 ? 8 : 4);
-    int indirectionsDataSize = (offsetOfIndirection >= 0x8000 ? 4 : 0) + (offsetAfterIndirection >= 0x8000 ? 4 : 0);
-    int codeSize = 8 + indirectionsCodeSize + indirectionsDataSize;
-
     VTableCallStub* pStub = stub();
     BYTE* p = (BYTE*)pStub->entryPoint();
 
-    // ldr x9,[x0] : x9 = MethodTable pointer
-    *(UINT32*)p = 0xF9400009; p += 4;
-
-    // moving offset value wrt PC. Currently points to first indirection offset data.
-    uint dataOffset = codeSize - indirectionsDataSize - 4;
+    // ld at,(a0) : at = MethodTable pointer
+    *(UINT32*)p = 0xdc810000; p += 4;
 
     if (offsetOfIndirection >= 0x8000)
     {
-        // ldr w10, [PC, #dataOffset]
-        *(DWORD*)p = 0x1800000a | ((dataOffset >> 2) << 5); p += 4;
-        // ldr x9, [x9, x10]
-        *(DWORD*)p = 0xf86a6929; p += 4;
+        uint dataOffset = 12 + (offsetOfIndirection >= 0x8000 ? 12 : 4) + (offsetAfterIndirection >= 0x8000 ? 12 : 4);
 
-        // move to next indirection offset data
-        dataOffset = dataOffset - 8 + 4; // subtract 8 as we have moved PC by 8 and add 4 as next data is at 4 bytes from previous data
+        // lwu  t3, dataOffset(t9)
+        *(DWORD*)p = 0x9f2f0000 | (UINT32)dataOffset; p += 4;
+        // daddu at, t3, at
+        *(DWORD*)p = 0x01e1082d; p += 4;
+        // ld at, 0(at)
+        *(DWORD*)p = 0xdc210000; p += 4;
     }
     else
     {
-        // ldr x9, [x9, #offsetOfIndirection]
-        *(DWORD*)p = 0xf9400129 | (((UINT32)offsetOfIndirection >> 3) << 10);
-        p += 4;
+        // ld at, offsetOfIndirection(at)
+        *(DWORD*)p = 0xdc210000 | (UINT32)offsetOfIndirection; p += 4;
     }
 
     if (offsetAfterIndirection >= 0x8000)
     {
-        // ldr w10, [PC, #dataOffset]
-        *(DWORD*)p = 0x1800000a | ((dataOffset >> 2) << 5); p += 4;
-        // ldr x9, [x9, x10]
-        *(DWORD*)p = 0xf86a6929; p += 4;
+        uint indirectionsCodeSize = (offsetOfIndirection >= 0x8000 ? 12 : 4) + (offsetAfterIndirection >= 0x8000 ? 12 : 4);
+        uint indirectionsDataSize = (offsetOfIndirection >= 0x8000 ? 4 : 0);
+        uint dataOffset = 12 + indirectionsCodeSize + indirectionsDataSize;
+
+        // lwu t3, dataOffset(t9)
+        *(DWORD*)p = 0x9f2f0000 | (UINT32)dataOffset; p += 4;
+        // daddu at, t3, at
+        *(DWORD*)p = 0x01e1082d; p += 4;
+        // ld t9, 0(at)
+        *(DWORD*)p = 0xdc390000; p += 4;
     }
     else
     {
-        // ldr x9, [x9, #offsetAfterIndirection]
-        *(DWORD*)p = 0xf9400129 | (((UINT32)offsetAfterIndirection >> 3) << 10);
-        p += 4;
+        // ld t9, offsetAfterIndirection(at)
+        *(DWORD*)p = 0xdc390000 | (UINT32)offsetAfterIndirection; p += 4;
     }
 
-    // br x9
-    *(UINT32*)p = 0xd61f0120; p += 4;
+    // jr t9
+    *(UINT32*)p = 0x03200008; p += 4;
+    // nop
+    *(UINT32*)p = 0; p += 4;
 
     // data labels:
     if (offsetOfIndirection >= 0x8000)
