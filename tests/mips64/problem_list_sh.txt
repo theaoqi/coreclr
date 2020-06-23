@@ -49,7 +49,5 @@ readytorun/DynamicMethodGCStress/DynamicMethodGCStress/DynamicMethodGCStress.sh 
 readytorun/tests/fileversionpreservation/fileversionpreservation/fileversionpreservation.sh mips64  #12739 failed on mips64
 readytorun/tests/genericsload/callgenericctor/callgenericctor.sh  #12739 failed on mips64
 readytorun/tests/genericsload/usegenericfield/usegenericfield.sh  #12739 failed on mips64
-readytorun/tests/mainv1/mainv1.sh mips64  #12739 failed on mips64
-readytorun/tests/mainv2/mainv2.sh mips64  #12739 failed on mips64
 tracing/eventcounter/pollingcounter/pollingcounter.sh mips64  #12739 failed on mips64
 tracing/tracecontrol/tracecontrol/tracecontrol.sh x64 mips64 #12863 failed item on x64 and mips64

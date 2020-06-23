@@ -152,8 +152,8 @@ Loader/regressions/polyrec/Polyrec/Polyrec.exe
 performance/linkbench/linkbench/LinkBench.exe
 performance/Scenario/JitBench/JitBench/JitBench.exe
 readytorun/tests/fileversionpreservation/fileversionpreservation/fileversionpreservation.exe
-readytorun/tests/mainv1/mainv1.exe
-readytorun/tests/mainv2/mainv2.exe
+readytorun/tests/mainv1/mainv1.exe #13354 must use the shell to test for depending on the ni-dll files.
+readytorun/tests/mainv2/mainv2.exe #13354 must use the shell to test for depending on the ni-dll files.
 Regressions/coreclr/GitHub_22888/test22888resources/test22888resources.exe
 Regressions/coreclr/GitHub_22888/test22888/test22888resources.exe
 sizeondisk/sodbench/SoDBench/SoDBench.exe

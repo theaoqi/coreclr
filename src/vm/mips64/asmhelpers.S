@@ -616,28 +616,28 @@ LEAF_END ThePreStubPatch, _TEXT
 //
 // The stub dispatch thunk which transfers control to StubDispatchFixupWorker.
 NESTED_ENTRY StubDispatchFixupStub, _TEXT, NoHandler
+    .set noreorder
 
     PROLOG_WITH_TRANSITION_BLOCK
 
     daddiu  AT, zero, -4
-    ////FIXME for MIPS: how the arguments are transfered ???
-    and  a1, t1, AT // Indirection cell
+    and  a1, t8, AT // Indirection cell
 
     lui  AT, %hi(%neg(%gp_rel(StubDispatchFixupStub)))
     daddu  AT, AT, t9
     daddiu  AT, AT, %lo(%neg(%gp_rel(StubDispatchFixupStub)))
     daddiu a0, sp, __PWTB_TransitionBlock        // pTransitionBlock
     ld  t9, %call16(StubDispatchFixupWorker)(AT)
-    move  a2, zero // sectionIndex
-    move  a3, zero // pModule
+    ori  a2, zero, 0 // sectionIndex
     jalr  t9
+    ori  a3, zero, 0 // pModule
 
-    // FIXME for MIPS64: should using t2 or t9 ???
     move  t9, v0
 
     EPILOG_WITH_TRANSITION_BLOCK_TAILCALL
     PATCH_LABEL StubDispatchFixupPatchLabel
     EPILOG_BRANCH_REG  t9
+    nop
 
 NESTED_END StubDispatchFixupStub, _TEXT
 #endif
@@ -1349,7 +1349,6 @@ NESTED_ENTRY ExternalMethodFixupStub, _TEXT, NoHandler
 
     PROLOG_WITH_TRANSITION_BLOCK
 
-
     lui  AT, %hi(%neg(%gp_rel(ExternalMethodFixupStub)))
     daddu  t0, AT, t9
     daddiu  AT, t0, %lo(%neg(%gp_rel(ExternalMethodFixupStub)))
@@ -1401,31 +1400,27 @@ NESTED_ENTRY DelayLoad_Helper\suffix\()_FakeProlog, _TEXT, NoHandler
 DelayLoad_Helper\suffix:
     .global DelayLoad_Helper\suffix
 
-    //TODO: should consider using .set noorder
-    //TODO: branch delay
+    .set noreorder
 
     PROLOG_WITH_TRANSITION_BLOCK
 
-       //DynamicHelperWorker(TransitionBlock * pTransitionBlock, TADDR * pCell,
-       //                    DWORD sectionIndex, Module * pModule, INT frameFlags)
-    ////FIXME for MIPS: how to get a1-a3 ?
-    //mov a1, x11      // Indirection cell
-    //mov a2, x9       // sectionIndex
-    //mov a3, x10      // Module*
-    daddiu a4, $0, \frameFlags
+    //DynamicHelperWorker(TransitionBlock * pTransitionBlock, TADDR * pCell,
+    //                    DWORD sectionIndex, Module * pModule, INT frameFlags)
+    ori  a1, t8, 0      // Indirection cell
+    ori  a2, t0, 0      // sectionIndex
+    ori  a3, t1, 0      // Module*
+    daddiu  a4, $0, \frameFlags
 
     lui  AT, %hi(%neg(%gp_rel(DelayLoad_Helper\suffix)))
     daddu  t0, AT, t9
     daddiu  AT, t0, %lo(%neg(%gp_rel(DelayLoad_Helper\suffix)))
     ld  t9, %call16(DynamicHelperWorker)(AT)
-    daddiu a0, sp, __PWTB_TransitionBlock        // pTransitionBlock
     jalr  t9
-    //TODO: branch delay
+    daddiu a0, sp, __PWTB_TransitionBlock        // pTransitionBlock
 
     bne v0, $0, LOCAL_LABEL(FakeProlog\suffix\()_0)
-    //TODO: branch delay
+    nop
 
-    ////FIXME for MIPS: v0 ???    TODO on mips64.
     ld  v0, __PWTB_ArgumentRegisters(sp)
     EPILOG_WITH_TRANSITION_BLOCK_RETURN
 
@@ -1433,6 +1428,7 @@ LOCAL_LABEL(FakeProlog\suffix\()_0):
     move t9, v0
     EPILOG_WITH_TRANSITION_BLOCK_TAILCALL
     EPILOG_BRANCH_REG  t9
+    nop
 
 NESTED_END DelayLoad_Helper\suffix\()_FakeProlog, _TEXT
 .endm
