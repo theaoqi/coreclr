@@ -8499,8 +8499,8 @@ regNumber emitter::emitInsTernary(instruction ins, emitAttr attr, GenTree* dst, 
                 }
                 else
                 {
-                    regNumber tempReg1 = REG_RA;//FIXME for MIPS: temporary fixs, should amend.
-                    regNumber tempReg2 = REG_T9;//FIXME for MIPS: temporary fixs, should amend.
+                    regNumber tempReg1 = REG_RA;
+                    regNumber tempReg2 = dst->GetSingleTempReg();
                     assert(tempReg1 != tempReg2);
                     assert(tempReg1 != saveOperReg1);
                     assert(tempReg2 != saveOperReg2);
