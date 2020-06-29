@@ -1121,7 +1121,7 @@ void CodeGen::genFuncletProlog(BasicBlock* block)
 
         maskSaveRegsInt &= ~(RBM_RA | RBM_FP); // We've saved these now
 
-        genSaveCalleeSavedRegistersHelp(maskSaveRegsInt | maskSaveRegsFloat, genFuncletInfo.fiSP_to_PSP_slot_delta + 8 , 0);
+        genSaveCalleeSavedRegistersHelp(maskSaveRegsInt | maskSaveRegsFloat, genFuncletInfo.fiSP_to_PSP_slot_delta + 8, 0);
     }
     else if (genFuncletInfo.fiFrameType == 2)
     {

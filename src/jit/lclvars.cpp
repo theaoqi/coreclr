@@ -5868,7 +5868,7 @@ void Compiler::lvaAssignVirtualFrameOffsetsToLocals()
 
         for (lclNum = 0; lclNum < lvaCount ; lclNum++, varDsc++)
         {
-            if (varDsc->lvOnFrame && varDsc->lvIsParam && varDsc->lvIsRegArg)
+            if (varDsc->lvIsParam && varDsc->lvIsRegArg)
             {
                 unsigned tmp_lclSize = lvaLclSize(lclNum) < 8 ? 8 : lvaLclSize(lclNum);
                 int pad = tmp_lclSize % 8;
@@ -5881,7 +5881,7 @@ void Compiler::lvaAssignVirtualFrameOffsetsToLocals()
         varDsc = lvaTable;
         for (lclNum = 0, j=0; lclNum < lvaCount ; lclNum++, varDsc++)
         {
-            if (varDsc->lvOnFrame && varDsc->lvIsParam && varDsc->lvIsRegArg)
+            if (varDsc->lvIsParam && varDsc->lvIsRegArg)
             {
                 varDsc->lvStkOffs = -lvaArgSize + (j>0 ? j: 0);
 
