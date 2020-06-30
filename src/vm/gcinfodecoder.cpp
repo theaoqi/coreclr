@@ -1770,8 +1770,9 @@ bool GcInfoDecoder::IsScratchRegister(int regNum,  PREGDISPLAY pRD)
 	/* FIXME for MIPS: ScratchRegisters? */
     //PORTABILITY_ASSERT("GcInfoDecoder::IsScratchRegister, MIPS.");
     _ASSERTE(regNum >= 0 && regNum <= 31);
+    _ASSERTE(regNum != 29);
 
-    return regNum == 1 || regNum == 24;//AT, T8
+    return regNum <= 15 || regNum >= 30 || regNum == 24 || regNum == 25;
 }
 
 bool GcInfoDecoder::IsScratchStackSlot(INT32 spOffset, GcStackSlotBase spBase, PREGDISPLAY     pRD)
