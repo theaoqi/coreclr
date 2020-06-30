@@ -1642,21 +1642,22 @@ static void LoadRegPair(BYTE* p, int reg1, int reg2, UINT32 offset)
 
 PCODE DynamicHelpers::CreateHelper(LoaderAllocator * pAllocator, TADDR arg, PCODE target)
 {
-    _ASSERTE(!"MIPS64: not implementation on mips64!!!");
     STANDARD_VM_CONTRACT;
 
     BEGIN_DYNAMIC_HELPER_EMIT(32);
 
-    // adr x8, <label>
-    // ldp x0, x12, [x8]
-    LoadRegPair(p, 0, 12, 16);
-    p += 8;
-    // br x12
-    *(DWORD*)p = 0xd61f0180;
+    // ld  a0, 16(t9)
+    *(DWORD*)p = 0xdf240010;
     p += 4;
-
-    // padding to make 8 byte aligned
-    *(DWORD*)p = 0xBADC0DF0; p += 4;
+    // ld  t9, 24(t9)
+    *(DWORD*)p = 0xdf390018;
+    p += 4;
+    // jr t9
+    *(DWORD*)p = 0x03200008;
+    p += 4;
+    // nop
+    *(DWORD*)p = 0;
+    p += 4;
 
     // label:
     // arg
@@ -1672,27 +1673,30 @@ PCODE DynamicHelpers::CreateHelper(LoaderAllocator * pAllocator, TADDR arg, PCOD
 // Caller must ensure sufficient byte are allocated including padding (if applicable)
 void DynamicHelpers::EmitHelperWithArg(BYTE*& p, LoaderAllocator * pAllocator, TADDR arg, PCODE target)
 {
-    _ASSERTE(!"MIPS64: not implementation on mips64!!!");
     STANDARD_VM_CONTRACT;
 
-    // if p is already aligned at 8-byte then padding is required for data alignment
-    bool padding = (((uintptr_t)p & 0x7) == 0);
-
-    // adr x8, <label>
-    // ldp x1, x12, [x8]
-    LoadRegPair(p, 1, 12, padding?16:12);
-    p += 8;
-
-    // br x12
-    *(DWORD*)p = 0xd61f0180;
+    // ld  a1, 16(t9)
+    *(DWORD*)p = 0xdf250010;
+    p += 4;
+    // ld  t9, 24(t9)
+    *(DWORD*)p = 0xdf390018;
+    p += 4;
+    // jr t9
+    *(DWORD*)p = 0x03200008;
+    p += 4;
+    // nop
+    *(DWORD*)p = 0;
     p += 4;
 
-    if(padding)
-    {
-        // padding to make 8 byte aligned
-        *(DWORD*)p = 0xBADC0DF0;
-        p += 4;
-    }
+    //// if p is not aligned at 8-byte then padding is required for data alignment
+    //if ((uintptr_t)p & 0x7)
+    //{
+    //    *(short*)(p-16) = 0x20;
+    //    *(short*)(p-12) = 0x28;
+    //    // padding to make 8 byte aligned
+    //    *(DWORD*)p = 0xffffffff;
+    //    p += 4;
+    //}
 
     // label:
     // arg
@@ -1705,7 +1709,6 @@ void DynamicHelpers::EmitHelperWithArg(BYTE*& p, LoaderAllocator * pAllocator, T
 
 PCODE DynamicHelpers::CreateHelperWithArg(LoaderAllocator * pAllocator, TADDR arg, PCODE target)
 {
-    _ASSERTE(!"MIPS64: not implementation on mips64!!!");
     STANDARD_VM_CONTRACT;
 
     BEGIN_DYNAMIC_HELPER_EMIT(32);
@@ -1717,22 +1720,30 @@ PCODE DynamicHelpers::CreateHelperWithArg(LoaderAllocator * pAllocator, TADDR ar
 
 PCODE DynamicHelpers::CreateHelper(LoaderAllocator * pAllocator, TADDR arg, TADDR arg2, PCODE target)
 {
-    _ASSERTE(!"MIPS64: not implementation on mips64!!!");
     STANDARD_VM_CONTRACT;
 
-    BEGIN_DYNAMIC_HELPER_EMIT(40);
+    BEGIN_DYNAMIC_HELPER_EMIT(48);
 
-    // adr x8, <label>
-    // ldp x0, x1, [x8] ; wback
-    LoadRegPair(p, 0, 1, 16);
-    p += 8;
+    // ld  a0, 24(t9)
+    *(DWORD*)p = 0xdf240018;
+    p += 4;
+    // ld  a1, 32(t9)
+    *(DWORD*)p = 0xdf250020;
+    p += 4;
+    // ld  t9, 40(t9)
+    *(DWORD*)p = 0xdf390028;
+    p += 4;
+    // jr t9
+    *(DWORD*)p = 0x03200008;
+    p += 4;
+    // nop
+    *(DWORD*)p = 0;
+    p += 4;
 
-    // ldr x12, [x8]
-    *(DWORD*)p = 0xf940010c;
+    // nop, padding to make 8 byte aligned
+    *(DWORD*)p = 0;
     p += 4;
-    // br x12
-    *(DWORD*)p = 0xd61f0180;
-    p += 4;
+
     // label:
     // arg
     *(TADDR*)p = arg;
@@ -1749,22 +1760,29 @@ PCODE DynamicHelpers::CreateHelper(LoaderAllocator * pAllocator, TADDR arg, TADD
 
 PCODE DynamicHelpers::CreateHelperArgMove(LoaderAllocator * pAllocator, TADDR arg, PCODE target)
 {
-    _ASSERTE(!"MIPS64: not implementation on mips64!!!");
     STANDARD_VM_CONTRACT;
 
-    BEGIN_DYNAMIC_HELPER_EMIT(32);
+    BEGIN_DYNAMIC_HELPER_EMIT(40);
 
-    // mov x1, x0
-    *(DWORD*)p = 0x91000001;
+    // ori a1, a0, 0
+    *(DWORD*)p = 0x34850000;
     p += 4;
 
-    // adr x8, <label>
-    // ldp x0, x12, [x8]
-    LoadRegPair(p, 0, 12, 12);
-    p += 8;
+    // ld  a0, 24(t9)
+    *(DWORD*)p = 0xdf240018;
+    p += 4;
+    // ld  t9, 32(t9)
+    *(DWORD*)p = 0xdf390020;
+    p += 4;
+    // jr t9
+    *(DWORD*)p = 0x03200008;
+    p += 4;
+    // nop
+    *(DWORD*)p = 0;
+    p += 4;
 
-    // br x12
-    *(DWORD*)p = 0xd61f0180;
+    // nop, padding to make 8 byte aligned
+    *(DWORD*)p = 0;
     p += 4;
 
     // label:
@@ -1780,31 +1798,32 @@ PCODE DynamicHelpers::CreateHelperArgMove(LoaderAllocator * pAllocator, TADDR ar
 
 PCODE DynamicHelpers::CreateReturn(LoaderAllocator * pAllocator)
 {
-    _ASSERTE(!"MIPS64: not implementation on mips64!!!");
     STANDARD_VM_CONTRACT;
 
-    BEGIN_DYNAMIC_HELPER_EMIT(4);
+    BEGIN_DYNAMIC_HELPER_EMIT(8);
 
-    // br lr
-    *(DWORD*)p = 0xd61f03c0;
+    // jr ra
+    *(DWORD*)p = 0x03e00008;
     p += 4;
+    // nop
+    *(DWORD*)p = 0;
+    p += 4;
+
     END_DYNAMIC_HELPER_EMIT();
 }
 
-////FIXME for MIPS.
 PCODE DynamicHelpers::CreateReturnConst(LoaderAllocator * pAllocator, TADDR arg)
 {
-    _ASSERTE(!"MIPS64: not implementation on mips64!!!");
+    //_ASSERTE(!"MIPS64: not implementation on mips64!!!");
     STANDARD_VM_CONTRACT;
 
     BEGIN_DYNAMIC_HELPER_EMIT(16);
 
-    // ldr x0, <lable>
-    *(DWORD*)p = 0x58000040;
+    // jr ra
+    *(DWORD*)p = 0x03e00008;
     p += 4;
-
-    // br lr
-    *(DWORD*)p = 0xd61f03c0;
+    // ld v0, 8(t9)        //should confirm.
+    *(DWORD*)p = 0xdf220008;
     p += 4;
 
     // label:
@@ -1817,25 +1836,21 @@ PCODE DynamicHelpers::CreateReturnConst(LoaderAllocator * pAllocator, TADDR arg)
 
 PCODE DynamicHelpers::CreateReturnIndirConst(LoaderAllocator * pAllocator, TADDR arg, INT8 offset)
 {
-    _ASSERTE(!"MIPS64: not implementation on mips64!!!");
     STANDARD_VM_CONTRACT;
 
     BEGIN_DYNAMIC_HELPER_EMIT(24);
 
-    // ldr x0, <label>
-    *(DWORD*)p = 0x58000080;
+    // ld  a0, 16(t9)
+    *(DWORD*)p = 0xdf240010;
     p += 4;
-
-    // ldr x0, [x0]
-    *(DWORD*)p = 0xf9400000;
+    // ld  v0, 0(a0)
+    *(DWORD*)p = 0xdc820000;
     p += 4;
-
-    // add x0, x0, offset
-    *(DWORD*)p = 0x91000000 | (offset << 10);
+    // jr ra
+    *(DWORD*)p = 0x03e00008;
     p += 4;
-
-    // br lr
-    *(DWORD*)p = 0xd61f03c0;
+    // daddiu v0, v0, offset
+    *(DWORD*)p = 0x64420000 | (offset & 0xff);
     p += 4;
 
     // label:
@@ -1848,22 +1863,22 @@ PCODE DynamicHelpers::CreateReturnIndirConst(LoaderAllocator * pAllocator, TADDR
 
 PCODE DynamicHelpers::CreateHelperWithTwoArgs(LoaderAllocator * pAllocator, TADDR arg, PCODE target)
 {
-    _ASSERTE(!"MIPS64: not implementation on mips64!!!");
     STANDARD_VM_CONTRACT;
 
     BEGIN_DYNAMIC_HELPER_EMIT(32);
 
-    // adr x8, <label>
-    // ldp x2, x12, [x8]
-    LoadRegPair(p, 2, 12, 16);
-    p += 8;
-
-    // br x12
-    *(DWORD*)p = 0xd61f0180;
+    // ld  a2, 16(t9)
+    *(DWORD*)p = 0xdf260010;
     p += 4;
-
-    // padding to make 8 byte aligned
-    *(DWORD*)p = 0xBADC0DF0; p += 4;
+    // ld  t9, 24(t9)
+    *(DWORD*)p = 0xdf390018;
+    p += 4;
+    // jr t9
+    *(DWORD*)p = 0x03200008;
+    p += 4;
+    // nop
+    *(DWORD*)p = 0;
+    p += 4;
 
     // label:
     // arg
@@ -1878,22 +1893,28 @@ PCODE DynamicHelpers::CreateHelperWithTwoArgs(LoaderAllocator * pAllocator, TADD
 
 PCODE DynamicHelpers::CreateHelperWithTwoArgs(LoaderAllocator * pAllocator, TADDR arg, TADDR arg2, PCODE target)
 {
-    _ASSERTE(!"MIPS64: not implementation on mips64!!!");
     STANDARD_VM_CONTRACT;
 
-    BEGIN_DYNAMIC_HELPER_EMIT(40);
+    BEGIN_DYNAMIC_HELPER_EMIT(48);
 
-    // adr x8, <label>
-    // ldp x2, x3, [x8]; wback
-    LoadRegPair(p, 2, 3, 16);
-    p += 8;
-
-    // ldr x12, [x8]
-    *(DWORD*)p = 0xf940010c;
+    // ld  a2, 24(t9)
+    *(DWORD*)p = 0xdf260018;
+    p += 4;
+    // ld  a3, 32(t9)
+    *(DWORD*)p = 0xdf270020;
+    p += 4;
+    // ld  t9, 40(t9)
+    *(DWORD*)p = 0xdf390028;
+    p += 4;
+    // jr t9
+    *(DWORD*)p = 0x03200008;
+    p += 4;
+    // nop
+    *(DWORD*)p = 0;
     p += 4;
 
-    // br x12
-    *(DWORD*)p = 0xd61f0180;
+    // nop, padding to make 8 byte aligned
+    *(DWORD*)p = 0;
     p += 4;
 
     // label:
@@ -1911,7 +1932,6 @@ PCODE DynamicHelpers::CreateHelperWithTwoArgs(LoaderAllocator * pAllocator, TADD
 
 PCODE DynamicHelpers::CreateDictionaryLookupHelper(LoaderAllocator * pAllocator, CORINFO_RUNTIME_LOOKUP * pLookup, DWORD dictionaryIndexAndSlot, Module * pModule)
 {
-    _ASSERTE(!"MIPS64: not implementation on mips64!!!");
     STANDARD_VM_CONTRACT;
 
     PCODE helperAddress = (pLookup->helper == CORINFO_HELP_RUNTIMEHANDLE_METHOD ?
@@ -1928,9 +1948,9 @@ PCODE DynamicHelpers::CreateDictionaryLookupHelper(LoaderAllocator * pAllocator,
     {
         BEGIN_DYNAMIC_HELPER_EMIT(32);
 
-        // X0 already contains generic context parameter
+        // a0 already contains generic context parameter
         // reuse EmitHelperWithArg for below two operations
-        // X1 <- pArgs
+        // a1 <- pArgs
         // branch to helperAddress
         EmitHelperWithArg(p, pAllocator, (TADDR)pArgs, helperAddress);
 
@@ -1938,88 +1958,110 @@ PCODE DynamicHelpers::CreateDictionaryLookupHelper(LoaderAllocator * pAllocator,
     }
     else
     {
-        int indirectionsCodeSize = 0;
+        int codeSize = 0;
         int indirectionsDataSize = 0;
         for (WORD i = 0; i < pLookup->indirections; i++) {
-            indirectionsCodeSize += (pLookup->offsets[i] > 32760 ? 8 : 4); // if( > 32760) (8 code bytes) else 4 bytes for instruction with offset encoded in instruction
+            codeSize += (pLookup->offsets[i] > 32760 ? 12 : 4); // if( > 32760) (12 code bytes) else 4 bytes for instructions.
             indirectionsDataSize += (pLookup->offsets[i] > 32760 ? 4 : 0); // 4 bytes for storing indirection offset values
         }
 
-        int codeSize = indirectionsCodeSize;
         if(pLookup->testForNull)
         {
-            codeSize += 4; // mov
-            codeSize += 12; // cbz-ret-mov
+            codeSize += 4; // ori
+            codeSize += 20; // beq-nop-jr-nop-ori
+
             //padding for 8-byte align (required by EmitHelperWithArg)
-            if((codeSize & 0x7) == 0)
+            if (codeSize & 0x7)
                 codeSize += 4;
-            codeSize += 28; // size of EmitHelperWithArg
+
+            codeSize += 32; // size of EmitHelperWithArg
         }
         else
         {
-            codeSize += 4 ; /* ret */
+            codeSize += 8 ; /* jr, nop */
         }
+
+        // the offset value of date_lable.
+        uint dataOffset = codeSize;
 
         codeSize += indirectionsDataSize;
 
         BEGIN_DYNAMIC_HELPER_EMIT(codeSize);
 
+        BYTE * old_p = p;
+
         if (pLookup->testForNull)
         {
-            // mov x9, x0
-            *(DWORD*)p = 0x91000009;
+            // ori t3, a0, 0
+            *(DWORD*)p = 0x348f0000;
             p += 4;
         }
 
-        // moving offset value wrt PC. Currently points to first indirection offset data.
-        uint dataOffset = codeSize - indirectionsDataSize - (pLookup->testForNull ? 4 : 0);
         for (WORD i = 0; i < pLookup->indirections; i++)
         {
             if(pLookup->offsets[i] > 32760)
             {
-                // ldr w10, [PC, #dataOffset]
-                *(DWORD*)p = 0x1800000a | ((dataOffset>>2)<<5);
+                // lwu at, dataOffset(t9)
+                *(DWORD*)p = 0x9f210000 | (UINT16)dataOffset;
                 p += 4;
-                // ldr x0, [x0, x10]
-                *(DWORD*)p = 0xf86a6800;
+                dataOffset += 4;
+                // daddu a0, a0, at
+                *(DWORD*)p = 0x0081202d;
                 p += 4;
-
-                // move to next indirection offset data
-                dataOffset = dataOffset - 8 + 4; // subtract 8 as we have moved PC by 8 and add 4 as next data is at 4 bytes from previous data
+                // ld a0, 0(a0)
+                *(DWORD*)p = 0xdc840000;
+                p += 4;
             }
             else
             {
                 // offset must be 8 byte aligned
                 _ASSERTE((pLookup->offsets[i] & 0x7) == 0);
 
-                // ldr x0, [x0, #(pLookup->offsets[i])]
-                *(DWORD*)p = 0xf9400000 | ( ((UINT32)pLookup->offsets[i]>>3) <<10 );
+                // ld a0, pLookup->offsets[i](a0)
+                *(DWORD*)p = 0xdc840000 | ((UINT16)pLookup->offsets[i]);
                 p += 4;
-                dataOffset -= 4; // subtract 4 as we have moved PC by 4
             }
         }
 
         // No null test required
         if (!pLookup->testForNull)
         {
-            // ret lr
-            *(DWORD*)p = 0xd65f03c0;
+            // jr ra
+            *(DWORD*)p = 0x03e00008;
+            p += 4;
+            // ori  v0, a0, 0
+            *(DWORD*)p = 0x34820000;
             p += 4;
         }
         else
         {
-            // cbz x0, nullvaluelabel
-            *(DWORD*)p = 0xb4000040;
+            // beq a0, zero, nullvaluelabel
+            *(DWORD*)p = 0x10800003;
             p += 4;
-            // ret lr
-            *(DWORD*)p = 0xd65f03c0;
+            // nop
+            *(DWORD*)p = 0;
             p += 4;
+
+            // jr ra
+            *(DWORD*)p = 0x03e00008;
+            p += 4;
+            // ori  v0, a0, 0
+            *(DWORD*)p = 0x34820000;
+            p += 4;
+
             // nullvaluelabel:
-            // mov x0, x9
-            *(DWORD*)p = 0x91000120;
+            // ori  a0, t3, 0
+            *(DWORD*)p = 0x35e40000;
             p += 4;
+            if ((uintptr_t)(p - old_p) & 0x7)
+            {
+                // nop, padding for 8-byte align (required by EmitHelperWithArg)
+                *(DWORD*)p = 0;
+                p += 4;
+            }
+
             // reuse EmitHelperWithArg for below two operations
-            // X1 <- pArgs
+            // a1 <- pArgs
             // branch to helperAddress
             EmitHelperWithArg(p, pAllocator, (TADDR)pArgs, helperAddress);
         }

@@ -295,6 +295,7 @@ size_t emitter::emitSizeOfInsDsc(instrDesc* id)
 
     switch (insOp)
     {
+        case INS_OPTS_RELOC:
         case INS_OPTS_RC:
             return sizeof(instrDescJmp);
             //break;
@@ -1952,6 +1953,7 @@ void emitter::emitIns_S_R(instruction ins, emitAttr attr, regNumber reg1, int va
     else
     {
         ssize_t imm2 = (imm>>16) & 0xffff;
+        assert(isValidSimm16(imm >> 16));
         emitIns_R_I(INS_lui, EA_PTRSIZE, REG_AT, imm2);
         imm2 = imm & 0xffff;
         emitIns_R_R_I(INS_ori, EA_PTRSIZE, REG_AT, REG_AT, imm2);
@@ -2030,6 +2032,7 @@ void emitter::emitIns_R_S(instruction ins, emitAttr attr, regNumber reg1, int va
     else
     {
         ssize_t imm2 = (imm>>16) & 0xffff;
+        assert(isValidSimm16(imm >> 16));
         emitIns_R_I(INS_lui, EA_PTRSIZE, REG_AT, imm2);
         imm2 = imm & 0xffff;
         emitIns_R_R_I(INS_ori, EA_PTRSIZE, REG_AT, REG_AT, imm2);
@@ -2740,11 +2743,7 @@ void emitter::emitIns_R_R_R_I(instruction ins,
                               insOpts     opt /* = INS_OPTS_NONE */,
                               emitAttr    attrReg2 /* = EA_UNKNOWN */)
 {
-#ifdef DEBUG
     assert(!"unimplemented on MIPS yet");
-#else
-    __asm__ volatile (" break \n\t  sw $0, 4($0) \n");
-#endif
 
     /* FIXME for MIPS: not used on mips. */
     regNumber regs[] = {reg1, reg2, reg3};
@@ -3343,9 +3342,51 @@ assert(!"unimplemented on MIPS yet");
 }
 
 // This computes address from the immediate which is relocatable.
-void emitter::emitIns_R_AI(instruction ins, emitAttr attr, regNumber ireg, ssize_t addr)
+void emitter::emitIns_R_AI(instruction ins, emitAttr attr, regNumber reg, ssize_t addr)
 {
-assert(!"unimplemented on MIPS yet");
+
+    assert(EA_IS_RELOC(attr));//EA_PTR_DSP_RELOC
+    assert(ins == INS_bal);//for special.
+    assert(isGeneralRegister(reg));
+
+    emitAttr size = EA_SIZE(attr);
+
+    // INS_OPTS_RELOC: placeholders.  4-ins:
+    //   bal 4
+    //   lui at, off-hi-16bits
+    //   ori at, at, off-lo-16bits
+    //   daddu  reg, at, ra
+
+    instrDescJmp* id = emitNewInstrJmp();
+
+    id->idIns(ins);
+    assert(reg != REG_R0); //for special. reg Must not be R0.
+    id->idReg1(reg); // destination register that will get the constant value.
+
+    id->idInsOpt(INS_OPTS_RELOC);
+
+    id->idOpSize(size);
+    id->idSetIsBound(); // We won't patch address since we will know the exact distance
+                        // once JIT code and data are allocated together.
+
+    id->idAddr()->iiaAddr = (BYTE*)addr;
+
+    //id->idjKeepLong = true;
+
+    /* Record the jump's IG and offset within it */
+    id->idjIG   = emitCurIG;
+    id->idjOffs = emitCurIGsize;
+
+    /* Append this jump to this IG's jump list */
+    id->idjNext = emitCurIGjmpList;
+    emitCurIGjmpList = id;
+
+#if EMITTER_STATS
+    emitTotalIGjmps++;
+#endif
+
+    //dispIns(id);//mips dumping instr by other-fun.
+    appendToCurIG(id);
 }
 
 void emitter::emitIns_AR_R(instruction ins, emitAttr attr, regNumber ireg, regNumber reg, int offs)
@@ -3550,6 +3591,7 @@ void emitter::emitIns_J(instruction ins, BasicBlock* dst, int instrCount)
             emitIns_I(INS_bal, EA_PTRSIZE, 4);
 
             ssize_t imm = ((ssize_t)instrCount>>16);
+            assert(isValidSimm16(imm));
             emitIns_R_I(INS_lui, EA_PTRSIZE, REG_AT, imm);
             imm = (instrCount & 0xffff);
             emitIns_R_R_I(INS_ori, EA_PTRSIZE, REG_AT, REG_AT, imm);
@@ -4625,6 +4667,45 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
 
     switch (insOp)
     {
+        case INS_OPTS_RELOC:
+        {
+            instrDescJmp* jmp = (instrDescJmp*) id;
+            //   bal 4
+            //   lui at, off-hi-16bits
+            //   ori at, at, off-lo-16bits
+            //   daddu  reg, at, ra
+            ssize_t imm = 4;
+            *(code_t *)dst = emitInsOps(INS_bal, nullptr, &imm);
+            dst += 4;
+
+            BYTE* addr = jmp->idAddr()->iiaAddr;//get addr.
+
+            emitRecordRelocation(dst+4, id->idAddr()->iiaAddr, IMAGE_REL_MIPS64_PC);
+            int64_t addrOffs = *(int32_t*)(dst +4);
+
+            assert(!(addrOffs & 3));
+            assert(addrOffs < 0x7fffffff);
+            assert(-((int64_t)1<<31) < addrOffs);
+
+            regs[0] = REG_AT;
+
+            imm = addrOffs >> 16;
+            *(code_t *)dst = emitInsOps(INS_lui, regs, &imm);
+            dst += 4;
+
+            regs[1] = REG_AT;
+            *(code_t *)dst = emitInsOps(INS_ori, regs, (ssize_t*) &addrOffs);
+            dst += 4;
+
+            regs[0] = jmp->idReg1();
+            //regs[1] = REG_AT;
+            regs[2] = REG_RA;
+            *(code_t *)dst = emitInsOps(INS_daddu, regs, nullptr);
+            dst += 4;
+
+            sz  = sizeof(instrDescJmp);
+        }
+            break;
         case INS_OPTS_RC:
         {
             instrDescJmp* jmp = (instrDescJmp*) id;
@@ -4655,6 +4736,7 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
             else
             {
                 imm = dataOffs >> 16;
+                assert(isValidSimm16(imm));
                 *(code_t *)dst = emitInsOps(INS_lui, regs, &imm);
                 dst += 4;
 
@@ -4707,6 +4789,7 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
 
                 regs[1] = REG_AT;
                 imm = imm >> 16;
+                assert(isValidSimm16(imm));
                 *(code_t *)dst = emitInsOps(INS_lui, regs, &imm);
                 dst += 8;
             }
@@ -4798,6 +4881,7 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
                     *(code_t *)(dst+4) = emitInsOps(INS_ori, regs, &imm);
 
                     imm = imm >> 16;
+                    assert(isValidSimm16(imm));
                     *(code_t *)dst = emitInsOps(INS_lui, regs, &imm);
                     dst += 8;
                 }
@@ -8493,8 +8577,8 @@ regNumber emitter::emitInsTernary(instruction ins, emitAttr attr, GenTree* dst, 
                 }
                 else
                 {
-                    regNumber tempReg1 = REG_RA;//FIXME for MIPS: temporary fixs, should amend.
-                    regNumber tempReg2 = REG_T9;//FIXME for MIPS: temporary fixs, should amend.
+                    regNumber tempReg1 = REG_RA;
+                    regNumber tempReg2 = dst->GetSingleTempReg();
                     assert(tempReg1 != tempReg2);
                     assert(tempReg1 != saveOperReg1);
                     assert(tempReg2 != saveOperReg2);

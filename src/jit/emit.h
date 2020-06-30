@@ -1020,6 +1020,7 @@ protected:
         {
             switch (idInsOpt())
             {
+                case INS_OPTS_RELOC:
                 case INS_OPTS_RC:
                     return 4 << 2;
                 case INS_OPTS_RL:

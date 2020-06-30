@@ -42,12 +42,9 @@
 MethodDesc* AsMethodDesc(size_t addr);
 static PBYTE getTargetOfCall(PBYTE instrPtr, PCONTEXT regs, PBYTE*nextInstr);
 bool isCallToStopForGCJitHelper(PBYTE instrPtr);
-#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
 static void replaceSafePointInstructionWithGcStressInstr(UINT32 safePointOffset, LPVOID codeStart);
 static bool replaceInterruptibleRangesWithGcStressInstr (UINT32 startOffset, UINT32 stopOffset, LPVOID codeStart);
-#elif defined(_TARGET_MIPS64_)
-//    _ASSERTE(!"not implemented for MIPS64 platform");
-#pragma message("unimplemented on MIPS yet")
 #endif
 
 // There is a call target instruction, try to find the MethodDesc for where target points to.
@@ -96,7 +93,6 @@ bool IsGcCoverageInterruptInstruction(PBYTE instrPtr)
 #elif defined(_TARGET_MIPS64_)
 ////FIXME for MIPS.
     UINT32 instrVal = *reinterpret_cast<UINT32*>(instrPtr);
-    _ASSERTE(!"not implemented for MIPS64 platform");
     switch (instrVal)
     {
     case INTERRUPT_INSTR:
@@ -787,7 +783,7 @@ void GCCoverageInfo::SprinkleBreakpoints(
     if ((regionOffsetAdj==0) && (*codeStart != INTERRUPT_INSTR))
         doingEpilogChecks = false;
 
-#elif defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#elif defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
     //Save the method code from hotRegion
     memcpy(saveAddr, (BYTE*)methodRegion.hotStartAddress, methodRegion.hotSize);
 
@@ -826,15 +822,12 @@ void GCCoverageInfo::SprinkleBreakpoints(
         FlushInstructionCache(GetCurrentProcess(), (BYTE*)methodRegion.coldStartAddress, methodRegion.coldSize);
     }
 
-#elif defined(_TARGET_MIPS64_)
-////FIXME for MIPS:
-    _ASSERTE(!"not implemented for MIPS64 platform");
 #else    
     _ASSERTE(!"not implemented for platform");
 #endif // _TARGET_X86_
 }
 
-#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_)
+#if defined(_TARGET_ARM_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
 
 #ifdef PARTIALLY_INTERRUPTIBLE_GC_SUPPORTED
 
@@ -907,6 +900,20 @@ void replaceSafePointInstructionWithGcStressInstr(UINT32 safePointOffset, LPVOID
     {
         instructionIsACallThroughRegister = TRUE;
     }
+#elif defined(_TARGET_MIPS64_)
+    DWORD instr = *((DWORD*)savedInstrPtr - 1);
+
+    // Is the call through a register or an immediate offset
+    // bal
+    if ((instr & 0x0000) == 0x04110000)
+    {
+        instructionIsACallThroughImmediate = TRUE;
+    }
+    // jalr
+    else if ((instr & 0x0000000F) == 0x00000009)
+    {
+        instructionIsACallThroughRegister = TRUE;
+    }
 #endif
     // safe point must always be after a call instruction 
     // and cannot be both call by register & immediate
@@ -922,7 +929,7 @@ void replaceSafePointInstructionWithGcStressInstr(UINT32 safePointOffset, LPVOID
         // safe point will be replaced with appropriate illegal instruction at execution time when reg value is known
 #if defined(_TARGET_ARM_)
         *((WORD*)instrPtr - 1) = INTERRUPT_INSTR_CALL;
-#elif defined(_TARGET_ARM64_)
+#elif defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
         *((DWORD*)instrPtr - 1) = INTERRUPT_INSTR_CALL;
 #endif
     }

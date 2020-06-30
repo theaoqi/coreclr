@@ -7250,6 +7250,7 @@ bool Compiler::fgCanFastTailCall(GenTreeCall* callee)
     // It is tracked with https://github.com/dotnet/coreclr/issues/12644.
     bool   hasMultiByteStackArgs = false;
     bool   hasTwoSlotSizedStruct = false;
+    bool   hasBigSizedStruct     = false;
     bool   hasHfaArg             = false;
     size_t nCalleeArgs           = calleeArgRegCount; // Keep track of how many args we have.
     size_t calleeStackSize       = 0;
@@ -7357,6 +7358,7 @@ bool Compiler::fgCanFastTailCall(GenTreeCall* callee)
                 assert(objClass != nullptr);
                 eeGetMIPS64PassStructInRegisterDescriptor(objClass, &structDesc);
 
+                int currentArgRegCount = 0;
                 for (unsigned int i = 0; i < structDesc.eightByteCount; i++)
                 {
                     if (structDesc.IsDoubleSlot(i))
@@ -7367,7 +7369,11 @@ bool Compiler::fgCanFastTailCall(GenTreeCall* callee)
                     {
                         ++calleeArgRegCount;
                     }
+                    ++currentArgRegCount;
                 }
+
+                if (currentArgRegCount > 2)
+                    hasBigSizedStruct = true;
 
 #elif defined(WINDOWS_AMD64_ABI)
 
@@ -7395,6 +7401,11 @@ bool Compiler::fgCanFastTailCall(GenTreeCall* callee)
         {
             break;
         }
+
+        if (hasBigSizedStruct)
+        {
+            break;
+        }
     }
 
     const unsigned maxRegArgs = MAX_REG_ARG;
@@ -7408,7 +7419,7 @@ bool Compiler::fgCanFastTailCall(GenTreeCall* callee)
 // Note that the GC'ness of on stack args need not match since the arg setup area is marked
 // as non-interruptible for fast tail calls.
 
-#if defined(WINDOWS_AMD64_ABI) || defined(_TARGET_MIPS64_)
+#if defined(WINDOWS_AMD64_ABI)
     assert(calleeStackSize == 0);
     size_t calleeStackSlots = ((calleeArgRegCount + calleeFloatArgRegCount) > maxRegArgs)
                                   ? (calleeArgRegCount + calleeFloatArgRegCount) - maxRegArgs
@@ -7500,6 +7511,50 @@ bool Compiler::fgCanFastTailCall(GenTreeCall* callee)
     // not true in many cases on x64 linux, remove this pessimization when
     // LowerFastTailCall is fixed. See https://github.com/dotnet/coreclr/issues/12468
     // for more information.
+    if (hasStackArgs && (nCalleeArgs > nCallerArgs))
+    {
+        reportFastTailCallDecision("Will not fastTailCall hasStackArgs && (nCalleeArgs > nCallerArgs)", callerStackSize,
+                                   calleeStackSize);
+        return false;
+    }
+
+    if (calleeStackSize > callerStackSize)
+    {
+        reportFastTailCallDecision("Will not fastTailCall calleeStackSize > callerStackSize", callerStackSize,
+                                   calleeStackSize);
+        return false;
+    }
+
+#elif defined(_TARGET_MIPS64_)
+    size_t calleeStackSlots = ((calleeArgRegCount + calleeFloatArgRegCount) > maxRegArgs)
+                                  ? (calleeArgRegCount + calleeFloatArgRegCount) - maxRegArgs
+                                  : 0;
+    calleeStackSize        = calleeStackSlots * TARGET_POINTER_SIZE;
+    size_t callerStackSize = info.compArgStackSize;
+
+    bool hasStackArgs = false;
+
+    if (callerStackSize > 0 || calleeStackSize > 0)
+    {
+        hasStackArgs = true;
+    }
+
+    // Go the slow route, if it has multi-byte params. This is an implementation
+    // limitatio see https://github.com/dotnet/coreclr/issues/12644.
+    if (hasMultiByteStackArgs)
+    {
+        reportFastTailCallDecision("Will not fastTailCall hasMultiByteStackArgs", callerStackSize, calleeStackSize);
+        return false;
+    }
+
+    if (hasBigSizedStruct)
+    {
+        reportFastTailCallDecision("Will not fastTailCall hasBigSizedStruct", callerStackSize, calleeStackSize);
+        return false;
+    }
+
+    // MIPS64: If we have more callee registers used than MAX_REG_ARG, then
+    // make sure the callee's incoming arguments is less than the caller's
     if (hasStackArgs && (nCalleeArgs > nCallerArgs))
     {
         reportFastTailCallDecision("Will not fastTailCall hasStackArgs && (nCalleeArgs > nCallerArgs)", callerStackSize,
@@ -7898,6 +7953,8 @@ void Compiler::fgMorphTailCall(GenTreeCall* call, void* pfnCopyArgs)
 
 #elif defined(_TARGET_ARM64_)
     NYI_ARM64("Tail calls via stub are unsupported on this platform.");
+#elif defined(_TARGET_MIPS64_)
+    NYI_MIPS64("Tail calls via stub are unsupported on this platform.");
 #endif // _TARGET_ARM64_
 
     // The function is responsible for doing explicit null check when it is necessary.
@@ -8429,7 +8486,7 @@ GenTree* Compiler::fgMorphCall(GenTreeCall* call)
                     szFailReason = "Method with non-standard args passed in callee trash register cannot be tail "
                                    "called via helper";
                 }
-#ifdef _TARGET_ARM64_
+#if defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
                 else
                 {
                     // NYI - TAILCALL_RECURSIVE/TAILCALL_HELPER.

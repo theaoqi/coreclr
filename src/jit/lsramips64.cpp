@@ -257,6 +257,12 @@ int LinearScan::BuildNode(GenTree* tree)
                 assert(tree->gtGetOp1()->TypeGet() == tree->gtGetOp2()->TypeGet());
             }
 
+            if (tree->gtOverflow())
+            {
+                // Need a register different from target reg to check for overflow.
+                buildInternalIntRegisterDefForNode(tree);
+                setInternalRegsDelayFree = true;
+            }
             __fallthrough;
 
         case GT_AND:
@@ -267,6 +273,7 @@ int LinearScan::BuildNode(GenTree* tree)
         case GT_RSZ:
         case GT_ROR:
             srcCount = BuildBinaryUses(tree->AsOp());
+            buildInternalRegisterUses();
             assert(dstCount == 1);
             BuildDef(tree);
             break;

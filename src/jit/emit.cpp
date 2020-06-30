@@ -3884,7 +3884,11 @@ AGAIN:
 #endif
 
 #ifdef _TARGET_MIPS64_
-        if (jmp->idAddr()->iiaIsJitDataOffset())
+        if (jmp->idInsOpt() == INS_OPTS_RELOC)
+        {
+            continue;
+        }
+        else if (jmp->idAddr()->iiaIsJitDataOffset())
         {
             // Reference to JIT data
 
