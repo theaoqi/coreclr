@@ -4757,7 +4757,6 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
 
         case INS_OPTS_RL:
         {
-            assert(!(id->idAddr()->iiaIsJitDataOffset()));
             //   bal 4
             //   lui at, dst-hi-16bits
             //   ori at, at, dst-lo-16bits
@@ -4825,7 +4824,6 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
         //   jalr/jr  t9
         //   nop           <-----here add delay-slot!
         {
-            assert(!(id->idAddr()->iiaIsJitDataOffset()));
             ssize_t imm = (ssize_t) id->idAddr()->iiaGetInstrEncode();//get jmp's offset, temporarily saved.
             assert(imm >= 0);
 
@@ -4914,7 +4912,6 @@ size_t emitter::emitOutputInstr(insGroup* ig, instrDesc* id, BYTE** dp)
             break;
 
         case INS_OPTS_C:
-            assert(!(id->idAddr()->iiaIsJitDataOffset()));
             if (id->idIsLargeCall())
             {
                 /* Must be a "fat" call descriptor */
