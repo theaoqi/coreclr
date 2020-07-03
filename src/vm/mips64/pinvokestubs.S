@@ -92,10 +92,56 @@
 //
 //
 NESTED_ENTRY JIT_PInvokeBegin, _TEXT, NoHandler
+    .set noreorder
 
-    ////FIXME for MIPS: not implements!!!
-    sw  zero, 0(zero)
-    break
+    PROLOG_SAVE_REG_PAIR_INDEXED   fp, ra, 32
+    PROLOG_SAVE_REG    s0, 16           //the stack slot at sp+24 is empty for 16 byte alignment
+
+    PREPARE_EXTERNAL_VAR JIT_PInvokeBegin, s_gsCookie, t0
+    ld     AT, 0(t0)
+    sd     AT, 0(a0)
+    daddiu s0, a0, SIZEOF__GSCookie
+
+    // s0 = pFrame
+    // set first slot to the value of InlinedCallFrame::`vftable' (checked by runtime code)
+    PREPARE_EXTERNAL_VAR JIT_PInvokeBegin, _ZTV16InlinedCallFrame, t0
+    daddiu  AT, t0, 16
+    sd      AT, 0(s0)
+
+    sd      zero, InlinedCallFrame__m_Datum(s0)
+
+    daddiu  t0, sp, 32
+    sd      t0, InlinedCallFrame__m_pCallSiteSP(s0)
+    sd      ra, InlinedCallFrame__m_pCallerReturnAddress(s0)
+
+    ld      AT, 0(sp)
+    sd      AT, InlinedCallFrame__m_pCalleeSavedFP(s0)
+
+    // v0 = GetThread()
+    lui  AT, %hi(%neg(%gp_rel(JIT_PInvokeBegin)))
+    daddu  AT, AT, t9
+    daddiu  AT, AT, %lo(%neg(%gp_rel(JIT_PInvokeBegin)))
+    ld  t9, %got_disp(GetThread)(AT)
+    jalr  t9
+    nop
+
+
+    sd     v0, InlinedCallFrame__m_pThread(s0)
+
+    // pFrame->m_Next = pThread->m_pFrame;
+    ld     AT, Thread_m_pFrame(v0)
+    sd     AT, Frame__m_Next(s0)
+
+    // pThread->m_pFrame = pFrame;
+    sd     s0, Thread_m_pFrame(v0)
+
+    // pThread->m_fPreemptiveGCDisabled = 0
+    sw     zero, Thread_m_fPreemptiveGCDisabled(v0)
+
+    EPILOG_RESTORE_REG      s0, 16    //the stack slot at sp+24 is empty for 16 byte alignment
+    EPILOG_RESTORE_REG_PAIR_INDEXED fp, ra, 32
+    EPILOG_RETURN
+    nop
 
 NESTED_END JIT_PInvokeBegin, _TEXT
 
@@ -106,13 +152,37 @@ NESTED_END JIT_PInvokeBegin, _TEXT
 //
 //
 LEAF_ENTRY JIT_PInvokeEnd, _TEXT
+    .set noreorder
 
-    ////FIXME for MIPS: not implements!!!
-    sw  zero, 0(zero)
-    break
+    daddiu  a0, a0, SIZEOF__GSCookie
+    ld      a1, InlinedCallFrame__m_pThread(a0)
+    // a0 = pFrame
+    // a1 = pThread
 
-//LOCAL_LABEL(RarePath):
-    //b       C_FUNC(JIT_PInvokeEndRarePath)
+    // pThread->m_fPreemptiveGCDisabled = 1
+    addiu  AT, zero, 1
+    sw     AT, Thread_m_fPreemptiveGCDisabled(a1)
+
+    // Check return trap
+    PREPARE_EXTERNAL_VAR JIT_PInvokeEnd, g_TrapReturningThreads, t0
+    ld   AT, 0(t0)
+    bne  AT, zero, LOCAL_LABEL(RarePath)
+    nop
+
+    // pThread->m_pFrame = pFrame->m_Next
+    ld  AT, Frame__m_Next(a0)
+    sd  AT, Thread_m_pFrame(a1)
+
+    jr  ra
+    nop
+
+LOCAL_LABEL(RarePath):
+    lui  AT, %hi(%neg(%gp_rel(JIT_PInvokeEnd)))
+    daddu  AT, AT, t9
+    daddiu  AT, AT, %lo(%neg(%gp_rel(JIT_PInvokeEnd)))
+    ld  t9, %got_disp(JIT_PInvokeEndRarePath)(AT)
+    jr  t9
+    nop
 
 LEAF_END JIT_PInvokeEnd, _TEXT
 
