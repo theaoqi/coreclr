@@ -162,7 +162,6 @@ void ZapBaseRelocs::WriteReloc(PVOID pSrc, int offset, ZapNode * pTarget, int ta
             TADDR pSitePage = ((TADDR)m_pImage->GetBaseAddress() + rva);
             INT64 relAddr = (INT64)(pActualTarget - pSitePage);
 
-            assert(!(relAddr & 3));
             assert(relAddr < 0x7fffffff);
             assert(-((int64_t)1<<31) < relAddr);
 

@@ -722,9 +722,9 @@ LEAF_END JIT_GetSharedGCStaticBase_SingleAppDomain, _TEXT
 //   a0, [a1-a7] arguments for the interface implementation target
 //
 // On Exit (to ResolveWorkerAsmStub):
-//   t1      contains the address of the indirection and the flags in the low two bits.
-//   t2      contains our contract (DispatchToken)
-//   t8,t9   will be trashed
+//   t8       contains the address of the indirection and the flags in the low two bits.
+//   t2       contains our contract (DispatchToken)
+//   at,v0,t9 will be trashed
 //
 
 #define BACKPATCH_FLAG      1
@@ -732,14 +732,13 @@ LEAF_END JIT_GetSharedGCStaticBase_SingleAppDomain, _TEXT
 
 NESTED_ENTRY ResolveWorkerChainLookupAsmStub, _TEXT, NoHandler
 
-    andi  AT, t8, BACKPATCH_FLAG
-    // First we check if t8 has the BACKPATCH_FLAG set
-    bne  AT, zero, 800f //LOCAL_LABEL(Fail)       // If the BACKPATCH_FLAGS is set we will go directly to the ResolveWorkerAsmStub
+    andi  AT, t8, BACKPATCH_FLAG     // First we check if t8 has the BACKPATCH_FLAG set
+    bne  AT, zero, LOCAL_LABEL(Fail) // If the BACKPATCH_FLAGS is set we will go directly to the ResolveWorkerAsmStub
 
     ld  t3, 0(a0)         // retrieve the MethodTable from the object ref in a0
 LOCAL_LABEL(MainLoop):
     ld  t1, ResolveCacheElem__pNext(t1)     // t1 <= the next entry in the chain
-    beq  t1, zero, 800f //LOCAL_LABEL(Fail)
+    beq  t1, zero, LOCAL_LABEL(Fail)
 
     ld  AT, 0(t1)
     ld  v0, 8(t1)
@@ -749,26 +748,24 @@ LOCAL_LABEL(MainLoop):
     // compare our DispatchToken with one in the ResolveCacheElem
     bne  t2, v0, LOCAL_LABEL(MainLoop)
 
-//LOCAL_LABEL(Success):
+LOCAL_LABEL(Success):
     PREPARE_EXTERNAL_VAR  ResolveWorkerChainLookupAsmStub, g_dispatch_cache_chain_success_counter, t3
-    ld  t8, 0(t3)
-    daddiu t8, t8, -1
-    sd  t8, 0(t3)
-    bltz t8, 2f //LOCAL_LABEL(Promote)
+    ld  AT, 0(t3)
+    daddiu AT, AT, -1
+    sd  AT, 0(t3)
+    bltz AT, LOCAL_LABEL(Promote)
 
     ld  t9, ResolveCacheElem__target(t1)    // get the ImplTarget
-    jr  t9               // branch to interface implemenation target
+    jr  t9                // branch to interface implemenation target
 
-2:
-//LOCAL_LABEL(Promote):
-                              // Move this entry to head postion of the chain
+LOCAL_LABEL(Promote):
+                          // Move this entry to head postion of the chain
     daddiu  AT, zero, 256
     sd  AT, 0(t3)         // be quick to reset the counter so we don't get a bunch of contending threads
     ori  t8, t8, PROMOTE_CHAIN_FLAG   // set PROMOTE_CHAIN_FLAG
     move  t2, t1           // We pass the ResolveCacheElem to ResolveWorkerAsmStub instead of the DispatchToken
 
-800:
-//LOCAL_LABEL(Fail):
+LOCAL_LABEL(Fail):
     lui  AT, %hi(%neg(%gp_rel(ResolveWorkerChainLookupAsmStub)))
     daddu  AT, AT, t9
     daddiu  AT, AT, %lo(%neg(%gp_rel(ResolveWorkerChainLookupAsmStub)))
