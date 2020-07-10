@@ -8516,6 +8516,14 @@ regNumber emitter::emitInsTernary(instruction ins, emitAttr attr, GenTree* dst, 
 
         // There's no need to check for overflow here
     }
+    else if (dst->OperGet() == GT_AND || dst->OperGet() == GT_OR || dst->OperGet() == GT_XOR)
+    {
+        emitIns_R_R_R(ins, attr, dst->gtRegNum, src1->gtRegNum, src2->gtRegNum);
+
+        // MIPS needs to sign-extend dst when deal with 32bit data
+        if (attr == EA_4BYTE)
+             emitIns_R_R_R(INS_addu, attr, dst->gtRegNum, dst->gtRegNum, REG_R0);
+    }
     else
     {
         regNumber saveOperReg1 = REG_NA;

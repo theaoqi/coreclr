@@ -2324,7 +2324,14 @@ void CodeGen::genCodeForNegNot(GenTree* tree)
     // The src must be a register.
     regNumber operandReg = genConsumeReg(operand);
 
-    getEmitter()->emitIns_R_R(ins, emitActualTypeSize(tree), targetReg, operandReg);
+    emitAttr attr = emitActualTypeSize(tree);
+    getEmitter()->emitIns_R_R(ins, attr, targetReg, operandReg);
+
+    if (ins == INS_not && attr == EA_4BYTE)
+    {
+        // MIPS needs to sign-extend dst when deal with 32bit data
+        getEmitter()->emitIns_R_R_R(INS_addu, attr, targetReg, targetReg, REG_R0);
+    }
 
     genProduceReg(tree);
 }
