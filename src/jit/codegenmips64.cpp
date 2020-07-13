@@ -3895,9 +3895,9 @@ void CodeGen::genCodeForCompare(GenTree* tree, bool IsJump)
 {
 /* FIXME for MIPS: should re-design for mips64. */
 
-    static regNumber SaveCcResultReg;
-    static ssize_t cc = 1;
-    static bool cc_true = true;
+    static thread_local regNumber SaveCcResultReg;
+    static thread_local ssize_t cc = 1;
+    static thread_local bool cc_true = true;
 
     emitter* emit = getEmitter();
     GenTreeOp* treeOp = tree->AsOp();
