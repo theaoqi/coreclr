@@ -2229,6 +2229,11 @@ void emitter::emitSetFrameRangeGCRs(int offsLo, int offsHi)
 #ifdef _TARGET_AMD64_
             // doesn't have to be all negative on amd
             printf("-%04X ... %04X\n", -offsLo, offsHi);
+#elif defined(_TARGET_MIPS64_)
+            if (offsHi < 0)
+                printf("-%04X ... -%04X\n", -offsLo, -offsHi);
+            else
+                printf("-%04X ... %04X\n", -offsLo, offsHi);
 #else
             printf("-%04X ... -%04X\n", -offsLo, -offsHi);
             assert(offsHi <= 0);

@@ -2324,7 +2324,14 @@ void CodeGen::genCodeForNegNot(GenTree* tree)
     // The src must be a register.
     regNumber operandReg = genConsumeReg(operand);
 
-    getEmitter()->emitIns_R_R(ins, emitActualTypeSize(tree), targetReg, operandReg);
+    emitAttr attr = emitActualTypeSize(tree);
+    getEmitter()->emitIns_R_R(ins, attr, targetReg, operandReg);
+
+    if (ins == INS_not && attr == EA_4BYTE)
+    {
+        // MIPS needs to sign-extend dst when deal with 32bit data
+        getEmitter()->emitIns_R_R_R(INS_addu, attr, targetReg, targetReg, REG_R0);
+    }
 
     genProduceReg(tree);
 }
@@ -3888,9 +3895,9 @@ void CodeGen::genCodeForCompare(GenTree* tree, bool IsJump)
 {
 /* FIXME for MIPS: should re-design for mips64. */
 
-    static regNumber SaveCcResultReg;
-    static ssize_t cc = 1;
-    static bool cc_true = true;
+    static thread_local regNumber SaveCcResultReg;
+    static thread_local ssize_t cc = 1;
+    static thread_local bool cc_true = true;
 
     emitter* emit = getEmitter();
     GenTreeOp* treeOp = tree->AsOp();
