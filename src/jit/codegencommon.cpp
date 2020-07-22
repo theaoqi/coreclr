@@ -5316,9 +5316,6 @@ void          CodeGen::genPushCalleeSavedRegisters()
     JITDUMP("    offset=%d, calleeSaveSPDelta=%d\n", offset, calleeSaveSPDelta);
     genSaveCalleeSavedRegistersHelp(maskSaveRegsInt | maskSaveRegsFloat, offset, -calleeSaveSPDelta);
 
-#ifdef DEBUG
-        printf("DEBUG: ARM64, frameType:%d\n\n", frameType);
-#endif
 
     offset += genCountBits(maskSaveRegsInt | maskSaveRegsFloat) * REGSIZE_BYTES;
 

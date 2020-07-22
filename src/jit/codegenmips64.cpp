@@ -3891,296 +3891,278 @@ void CodeGen::genCkfinite(GenTree* treeNode)
 // Arguments:
 //    tree - the node
 //
-void CodeGen::genCodeForCompare(GenTree* tree, bool IsJump)
+void CodeGen::genCodeForCompare(GenTreeOp* tree)
 {
 /* FIXME for MIPS: should re-design for mips64. */
 
-    static thread_local regNumber SaveCcResultReg;
-    static thread_local ssize_t cc = 1;
-    static thread_local bool cc_true = true;
+    ssize_t cc = 1;
+    bool cc_true = true;
 
+    regNumber targetReg = tree->gtRegNum;
     emitter* emit = getEmitter();
-    GenTreeOp* treeOp = tree->AsOp();
 
-    if (!IsJump)
+    GenTree*  op1     = tree->gtOp1;
+    GenTree*  op2     = tree->gtOp2;
+    var_types op1Type = genActualType(op1->TypeGet());
+    var_types op2Type = genActualType(op2->TypeGet());
+
+    assert(!op1->isUsedFromMemory());
+    assert(!op2->isUsedFromMemory());
+
+    genConsumeOperands(tree);
+
+    emitAttr cmpSize = EA_ATTR(genTypeSize(op1Type));
+
+    GenCondition condition = GenCondition::FromRelop(tree);
+    assert(genTypeSize(op1Type) == genTypeSize(op2Type));
+
+    regNumber SaveCcResultReg = targetReg != REG_NA ? targetReg : REG_AT;
+    if (varTypeIsFloating(op1Type))
     {
-        GenTree*  op1     = treeOp->gtOp1;
-        GenTree*  op2     = treeOp->gtOp2;
-        var_types op1Type = genActualType(op1->TypeGet());
-        var_types op2Type = genActualType(op2->TypeGet());
+        /* FIXME for MIPS: */
+        assert(tree->OperIs(GT_LT, GT_LE, GT_EQ, GT_NE, GT_GT, GT_GE));
+        bool IsUnordered = condition.IsUnordered();
 
-        assert(!op1->isUsedFromMemory());
-        assert(!op2->isUsedFromMemory());
-
-        genConsumeOperands(treeOp);
-
-        emitAttr cmpSize = EA_ATTR(genTypeSize(op1Type));
-
-        GenCondition condition = GenCondition::FromRelop(treeOp);
-        assert(genTypeSize(op1Type) == genTypeSize(op2Type));
-        if (varTypeIsFloating(op1Type))
+        if (tree->OperIs(GT_EQ))
         {
-            /* FIXME for MIPS: */
-            assert(treeOp->OperIs(GT_LT, GT_LE, GT_EQ, GT_NE, GT_GT, GT_GE));
-            bool IsUnordered = condition.IsUnordered();
-
-            if (treeOp->OperIs(GT_EQ))
-            {
-                cc_true = true;
-                if (cmpSize == EA_4BYTE)
-                    emit->emitIns_R_R_I(IsUnordered ? INS_c_ueq_s : INS_c_eq_s, EA_4BYTE, op1->gtRegNum, op2->gtRegNum, cc);
-                else
-                    emit->emitIns_R_R_I(IsUnordered ? INS_c_ueq_d : INS_c_eq_d, EA_8BYTE, op1->gtRegNum, op2->gtRegNum, cc);
-            }
-            else if (treeOp->OperIs(GT_NE))
-            {
-                cc_true = false;
-                if (cmpSize == EA_4BYTE)
-                    emit->emitIns_R_R_I(IsUnordered ? INS_c_eq_s : INS_c_ueq_s, EA_4BYTE, op1->gtRegNum, op2->gtRegNum, cc);
-                else
-                    emit->emitIns_R_R_I(IsUnordered ? INS_c_eq_d : INS_c_ueq_d, EA_8BYTE, op1->gtRegNum, op2->gtRegNum, cc);
-            }
-            else if (treeOp->OperIs(GT_LT))
-            {
-                cc_true = true;
-                if (cmpSize == EA_4BYTE)
-                    emit->emitIns_R_R_I(IsUnordered ? INS_c_ult_s : INS_c_olt_s, EA_4BYTE, op1->gtRegNum, op2->gtRegNum, cc);
-                else
-                    emit->emitIns_R_R_I(IsUnordered ? INS_c_ult_d : INS_c_olt_d, EA_8BYTE, op1->gtRegNum, op2->gtRegNum, cc);
-            }
-            else if (treeOp->OperIs(GT_LE))
-            {
-                cc_true = true;
-                if (cmpSize == EA_4BYTE)
-                    emit->emitIns_R_R_I(IsUnordered ? INS_c_ule_s : INS_c_ole_s, EA_8BYTE, op1->gtRegNum, op2->gtRegNum, cc);
-                else
-                    emit->emitIns_R_R_I(IsUnordered ? INS_c_ule_d : INS_c_ole_d, EA_8BYTE, op1->gtRegNum, op2->gtRegNum, cc);
-            }
-            else if (treeOp->OperIs(GT_GE))
-            {
-                cc_true = false;
-                if (cmpSize == EA_4BYTE)
-                    emit->emitIns_R_R_I(IsUnordered ? INS_c_olt_s : INS_c_ult_s, EA_4BYTE, op1->gtRegNum, op2->gtRegNum, cc);
-                else
-                    emit->emitIns_R_R_I(IsUnordered ? INS_c_olt_d : INS_c_ult_d, EA_8BYTE, op1->gtRegNum, op2->gtRegNum, cc);
-            }
-            else if (treeOp->OperIs(GT_GT))
-            {
-                cc_true = false;
-                if (cmpSize == EA_4BYTE)
-                    emit->emitIns_R_R_I(IsUnordered ? INS_c_ole_s : INS_c_ule_s, EA_4BYTE, op1->gtRegNum, op2->gtRegNum, cc);
-                else
-                    emit->emitIns_R_R_I(IsUnordered ? INS_c_ole_d : INS_c_ule_d, EA_8BYTE, op1->gtRegNum, op2->gtRegNum, cc);
-            }
-
-            if (tree->gtRegNum != REG_NA)
-            {
-                emit->emitIns_R_R(INS_cfc1, EA_PTRSIZE, tree->gtRegNum, regNumber(25));
-
-                ssize_t imm = 1 << cc;
-                emit->emitIns_R_R_I(INS_andi, EA_PTRSIZE, tree->gtRegNum, tree->gtRegNum, imm);
-
-                emit->emitIns_R_R_R(INS_sltu, EA_PTRSIZE, tree->gtRegNum, REG_R0, tree->gtRegNum);
-
-                if (!cc_true)
-                {
-                    imm = 1;
-                    emit->emitIns_R_R_I(INS_xori, EA_PTRSIZE, tree->gtRegNum, tree->gtRegNum, imm);
-                }
-                SaveCcResultReg = tree->gtRegNum;
-            }
+            cc_true = true;
+            if (cmpSize == EA_4BYTE)
+                emit->emitIns_R_R_I(IsUnordered ? INS_c_ueq_s : INS_c_eq_s, EA_4BYTE, op1->gtRegNum, op2->gtRegNum, cc);
             else
-                SaveCcResultReg = REG_NA;
-
-            //SaveCcResultReg = tree->gtRegNum;
-            assert(0 <= cc && cc < 8);
+                emit->emitIns_R_R_I(IsUnordered ? INS_c_ueq_d : INS_c_eq_d, EA_8BYTE, op1->gtRegNum, op2->gtRegNum, cc);
         }
-        else
+        else if (tree->OperIs(GT_NE))
         {
-            /* FIXME for MIPS: WARING! Only support "GT_CMP", "GT_EQ", "GT_GT", "GT_GE", "GT_LE" and "GT_LT" !!! */
-#ifdef DEBUG
-            if (!treeOp->OperIs(GT_CMP, GT_LT, GT_LE, GT_EQ, GT_NE, GT_GT, GT_GE))
+            cc_true = false;
+            if (cmpSize == EA_4BYTE)
+                emit->emitIns_R_R_I(IsUnordered ? INS_c_eq_s : INS_c_ueq_s, EA_4BYTE, op1->gtRegNum, op2->gtRegNum, cc);
+            else
+                emit->emitIns_R_R_I(IsUnordered ? INS_c_eq_d : INS_c_ueq_d, EA_8BYTE, op1->gtRegNum, op2->gtRegNum, cc);
+        }
+        else if (tree->OperIs(GT_LT))
+        {
+            cc_true = true;
+            if (cmpSize == EA_4BYTE)
+                emit->emitIns_R_R_I(IsUnordered ? INS_c_ult_s : INS_c_olt_s, EA_4BYTE, op1->gtRegNum, op2->gtRegNum, cc);
+            else
+                emit->emitIns_R_R_I(IsUnordered ? INS_c_ult_d : INS_c_olt_d, EA_8BYTE, op1->gtRegNum, op2->gtRegNum, cc);
+        }
+        else if (tree->OperIs(GT_LE))
+        {
+            cc_true = true;
+            if (cmpSize == EA_4BYTE)
+                emit->emitIns_R_R_I(IsUnordered ? INS_c_ule_s : INS_c_ole_s, EA_8BYTE, op1->gtRegNum, op2->gtRegNum, cc);
+            else
+                emit->emitIns_R_R_I(IsUnordered ? INS_c_ule_d : INS_c_ole_d, EA_8BYTE, op1->gtRegNum, op2->gtRegNum, cc);
+        }
+        else if (tree->OperIs(GT_GE))
+        {
+            cc_true = false;
+            if (cmpSize == EA_4BYTE)
+                emit->emitIns_R_R_I(IsUnordered ? INS_c_olt_s : INS_c_ult_s, EA_4BYTE, op1->gtRegNum, op2->gtRegNum, cc);
+            else
+                emit->emitIns_R_R_I(IsUnordered ? INS_c_olt_d : INS_c_ult_d, EA_8BYTE, op1->gtRegNum, op2->gtRegNum, cc);
+        }
+        else if (tree->OperIs(GT_GT))
+        {
+            cc_true = false;
+            if (cmpSize == EA_4BYTE)
+                emit->emitIns_R_R_I(IsUnordered ? INS_c_ole_s : INS_c_ule_s, EA_4BYTE, op1->gtRegNum, op2->gtRegNum, cc);
+            else
+                emit->emitIns_R_R_I(IsUnordered ? INS_c_ole_d : INS_c_ule_d, EA_8BYTE, op1->gtRegNum, op2->gtRegNum, cc);
+        }
+
+        emit->emitIns_R_R(INS_cfc1, EA_PTRSIZE, SaveCcResultReg, regNumber(25));
+
+        ssize_t imm = 1 << cc;
+        emit->emitIns_R_R_I(INS_andi, EA_PTRSIZE, SaveCcResultReg, SaveCcResultReg, imm);
+
+        emit->emitIns_R_R_R(INS_sltu, EA_PTRSIZE, SaveCcResultReg, REG_R0, SaveCcResultReg);
+
+        if (!cc_true)
+        {
+            imm = 1;
+            emit->emitIns_R_R_I(INS_xori, EA_PTRSIZE, SaveCcResultReg, SaveCcResultReg, imm);
+        }
+
+        assert(0 <= cc && cc < 8);
+    }
+    else
+    {
+        assert(tree->OperIs(GT_CMP, GT_LT, GT_LE, GT_EQ, GT_NE, GT_GT, GT_GE));
+
+        bool IsUnsigned = condition.IsUnsigned();
+
+        if (op2->isContainedIntOrIImmed())
+        {
+            /* FIXME for MIPS: should modify intConst. Best is design a new func. */
+            GenTreeIntConCommon* intConst = op2->AsIntConCommon();
+            ssize_t imm = intConst->IconValue();
+
+            if (IsUnsigned)
             {
-                printf("Unimplemented ");
-                printf("UNKNOWN GT node yet\n");
+                switch (cmpSize)
+                {
+                case EA_1BYTE:
+                    imm = static_cast<uint8_t>(imm);
+                    break;
+                case EA_2BYTE:
+                    imm = static_cast<uint16_t>(imm);
+                    break;
+                case EA_4BYTE:
+                    imm = static_cast<uint32_t>(imm);
+                    break;
+                default:
+                    break;
+                }
             }
-#endif
-            assert(treeOp->OperIs(GT_CMP, GT_LT, GT_LE, GT_EQ, GT_NE, GT_GT, GT_GE));
 
-            SaveCcResultReg = (tree->gtRegNum != REG_NA) ? tree->gtRegNum : REG_AT;
-
-            bool IsUnsigned = condition.IsUnsigned();
-
-            if (op2->isContainedIntOrIImmed())
+            if (tree->OperIs(GT_CMP))
             {
-                /* FIXME for MIPS: should modify intConst. Best is design a new func. */
-                GenTreeIntConCommon* intConst = op2->AsIntConCommon();
-                ssize_t imm = intConst->IconValue();
-
-                if (IsUnsigned)
+                assert(!"------------should comfirm.");
+                //emit->emitIns_R_R_I(IsUnsigned ? INS_sltiu : INS_slti, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, imm);
+            }
+            else if (tree->OperIs(GT_LT))
+            {
+                if (isValidSimm16(imm))
                 {
-                    switch (cmpSize)
-                    {
-                    case EA_1BYTE:
-                        imm = static_cast<uint8_t>(imm);
-                        break;
-                    case EA_2BYTE:
-                        imm = static_cast<uint16_t>(imm);
-                        break;
-                    case EA_4BYTE:
-                        imm = static_cast<uint32_t>(imm);
-                        break;
-                    default:
-                        break;
-                    }
-                }
-
-                if (treeOp->OperIs(GT_CMP))
-                {
-                    assert(!"------------should comfirm.");
-                    //emit->emitIns_R_R_I(IsUnsigned ? INS_sltiu : INS_slti, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, imm);
-                }
-                else if (treeOp->OperIs(GT_LT))
-                {
-                    if (isValidSimm16(imm))
-                    {
-                        emit->emitIns_R_R_I(IsUnsigned ? INS_sltiu : INS_slti, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, imm);
-                    }
-                    else
-                    {
-                        set_Reg_To_Imm(emit, EA_PTRSIZE, REG_AT, imm);
-                        emit->emitIns_R_R_R(IsUnsigned ? INS_sltu : INS_slt, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, REG_AT);
-                    }
-                }
-                else if (treeOp->OperIs(GT_LE))
-                {
-                    set_Reg_To_Imm(emit, EA_PTRSIZE, REG_AT, imm);
-
-                    emit->emitIns_R_R_R(IsUnsigned ? INS_sltu : INS_slt, EA_PTRSIZE, SaveCcResultReg, REG_AT, op1->gtRegNum);
-
-                    emit->emitIns_R_R_I(INS_xori, EA_PTRSIZE, SaveCcResultReg, SaveCcResultReg, 1);
-                }
-                else if (treeOp->OperIs(GT_GT))
-                {
-                    set_Reg_To_Imm(emit, EA_PTRSIZE, REG_AT, imm);
-
-                    emit->emitIns_R_R_R(IsUnsigned ? INS_sltu : INS_slt, EA_PTRSIZE, SaveCcResultReg, REG_AT, op1->gtRegNum);
-                }
-                else if (treeOp->OperIs(GT_GE))
-                {
-                    if (isValidSimm16(imm))
-                    {
-                        emit->emitIns_R_R_I(IsUnsigned ? INS_sltiu : INS_slti, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, imm);
-                    }
-                    else
-                    {
-                        set_Reg_To_Imm(emit, EA_PTRSIZE, REG_AT, imm);
-
-                        emit->emitIns_R_R_R(IsUnsigned ? INS_sltu : INS_slt, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, REG_AT);
-                    }
-
-                    emit->emitIns_R_R_I(INS_xori, EA_PTRSIZE, SaveCcResultReg, SaveCcResultReg, 1);
-                }
-                else if (treeOp->OperIs(GT_NE))
-                {
-                    if (imm)
-                    {
-                        set_Reg_To_Imm(emit, EA_PTRSIZE, REG_AT, imm);
-
-                        emit->emitIns_R_R_R(INS_xor, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, REG_AT);
-
-                        emit->emitIns_R_R_R(INS_sltu, EA_PTRSIZE, SaveCcResultReg, REG_R0, SaveCcResultReg);
-                    }
-                    else
-                    {
-                        emit->emitIns_R_R_R(INS_sltu, EA_PTRSIZE, SaveCcResultReg, REG_R0, op1->gtRegNum);
-                    }
-                }
-                else if (treeOp->OperIs(GT_EQ))
-                {
-                    if (imm)
-                    {
-                        set_Reg_To_Imm(emit, EA_PTRSIZE, REG_AT, imm);
-
-                        emit->emitIns_R_R_R(INS_xor, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, REG_AT);
-
-                        emit->emitIns_R_R_I(INS_sltiu, EA_PTRSIZE, SaveCcResultReg, SaveCcResultReg, 1);
-                    }
-                    else
-                    {
-                        emit->emitIns_R_R_I(INS_sltiu, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, 1);
-                    }
+                    emit->emitIns_R_R_I(IsUnsigned ? INS_sltiu : INS_slti, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, imm);
                 }
                 else
                 {
-                    assert(!"unimplemented on MIPS yet");
+                    set_Reg_To_Imm(emit, EA_PTRSIZE, REG_AT, imm);
+                    emit->emitIns_R_R_R(IsUnsigned ? INS_sltu : INS_slt, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, REG_AT);
                 }
             }
-            else
+            else if (tree->OperIs(GT_LE))
             {
-                if (treeOp->OperIs(GT_CMP))
-                {
-                    assert(!"------------should comfirm-3.");
-                }
-                else if (/*treeOp->OperIs(GT_CMP) ||*/ treeOp->OperIs(GT_LT))
-                {
-                    emit->emitIns_R_R_R(IsUnsigned ? INS_sltu : INS_slt, EA_8BYTE, SaveCcResultReg, op1->gtRegNum, op2->gtRegNum);
-                }
-                else if (treeOp->OperIs(GT_LE))
-                {
-                    emit->emitIns_R_R_R(IsUnsigned ? INS_sltu : INS_slt, EA_8BYTE, SaveCcResultReg, op2->gtRegNum, op1->gtRegNum);
+                set_Reg_To_Imm(emit, EA_PTRSIZE, REG_AT, imm);
 
-                    emit->emitIns_R_R_I(INS_xori, EA_PTRSIZE, SaveCcResultReg, SaveCcResultReg, 1);
-                }
-                else if (treeOp->OperIs(GT_GT))
-                {
-                    emit->emitIns_R_R_R(IsUnsigned ? INS_sltu : INS_slt, EA_8BYTE, SaveCcResultReg, op2->gtRegNum, op1->gtRegNum);
-                }
-                else if (treeOp->OperIs(GT_GE))
-                {
-                    emit->emitIns_R_R_R(IsUnsigned ? INS_sltu : INS_slt, EA_8BYTE, SaveCcResultReg, op1->gtRegNum, op2->gtRegNum);
+                emit->emitIns_R_R_R(IsUnsigned ? INS_sltu : INS_slt, EA_PTRSIZE, SaveCcResultReg, REG_AT, op1->gtRegNum);
 
-                    emit->emitIns_R_R_I(INS_xori, EA_PTRSIZE, SaveCcResultReg, SaveCcResultReg, 1);
-                }
-                else if (treeOp->OperIs(GT_NE))
+                emit->emitIns_R_R_I(INS_xori, EA_PTRSIZE, SaveCcResultReg, SaveCcResultReg, 1);
+            }
+            else if (tree->OperIs(GT_GT))
+            {
+                set_Reg_To_Imm(emit, EA_PTRSIZE, REG_AT, imm);
+
+                emit->emitIns_R_R_R(IsUnsigned ? INS_sltu : INS_slt, EA_PTRSIZE, SaveCcResultReg, REG_AT, op1->gtRegNum);
+            }
+            else if (tree->OperIs(GT_GE))
+            {
+                if (isValidSimm16(imm))
                 {
-                    emit->emitIns_R_R_R(INS_xor, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, op2->gtRegNum);
+                    emit->emitIns_R_R_I(IsUnsigned ? INS_sltiu : INS_slti, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, imm);
+                }
+                else
+                {
+                    set_Reg_To_Imm(emit, EA_PTRSIZE, REG_AT, imm);
+
+                    emit->emitIns_R_R_R(IsUnsigned ? INS_sltu : INS_slt, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, REG_AT);
+                }
+
+                emit->emitIns_R_R_I(INS_xori, EA_PTRSIZE, SaveCcResultReg, SaveCcResultReg, 1);
+            }
+            else if (tree->OperIs(GT_NE))
+            {
+                if (imm)
+                {
+                    set_Reg_To_Imm(emit, EA_PTRSIZE, REG_AT, imm);
+
+                    emit->emitIns_R_R_R(INS_xor, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, REG_AT);
+
                     emit->emitIns_R_R_R(INS_sltu, EA_PTRSIZE, SaveCcResultReg, REG_R0, SaveCcResultReg);
                 }
-                else if (treeOp->OperIs(GT_EQ))
+                else
                 {
-                    emit->emitIns_R_R_R(INS_xor, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, op2->gtRegNum);
+                    emit->emitIns_R_R_R(INS_sltu, EA_PTRSIZE, SaveCcResultReg, REG_R0, op1->gtRegNum);
+                }
+            }
+            else if (tree->OperIs(GT_EQ))
+            {
+                if (imm)
+                {
+                    set_Reg_To_Imm(emit, EA_PTRSIZE, REG_AT, imm);
+
+                    emit->emitIns_R_R_R(INS_xor, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, REG_AT);
 
                     emit->emitIns_R_R_I(INS_sltiu, EA_PTRSIZE, SaveCcResultReg, SaveCcResultReg, 1);
                 }
                 else
                 {
-                    assert(!"unimplemented on MIPS yet");
+                    emit->emitIns_R_R_I(INS_sltiu, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, 1);
                 }
             }
-        }
-    }
-    else
-    {//GT_JTRUE
-        assert(compiler->compCurBB->bbJumpKind == BBJ_COND);
-        assert(treeOp->OperIs(GT_JTRUE));
-
-        if (SaveCcResultReg != REG_NA)
-        {
-            GenCondition condition = GenCondition::FromRelop(treeOp->gtGetOp1());
-
-            ssize_t imm = 7 << 2;//size of Jump-placeholders in bytes liking within emitter::emitIns_J() .
-            emit->emitIns_R_R_I(INS_beq, EA_PTRSIZE, SaveCcResultReg, REG_R0, imm);
-            instGen(INS_nop);
+            else
+            {
+                assert(!"unimplemented on MIPS yet");
+            }
         }
         else
         {
-            emit->emitIns_I_I(cc_true ? INS_bc1f : INS_bc1t, EA_PTRSIZE, cc, 7 << 2);
-            emit->emitIns(INS_nop);
-        }
+            if (tree->OperIs(GT_CMP))
+            {
+                assert(!"------------should comfirm-3.");
+            }
+            else if (/*tree->OperIs(GT_CMP) ||*/ tree->OperIs(GT_LT))
+            {
+                emit->emitIns_R_R_R(IsUnsigned ? INS_sltu : INS_slt, EA_8BYTE, SaveCcResultReg, op1->gtRegNum, op2->gtRegNum);
+            }
+            else if (tree->OperIs(GT_LE))
+            {
+                emit->emitIns_R_R_R(IsUnsigned ? INS_sltu : INS_slt, EA_8BYTE, SaveCcResultReg, op2->gtRegNum, op1->gtRegNum);
 
-        inst_JMP(EJ_jmp, compiler->compCurBB->bbJumpDest);//no branch-delay.
+                emit->emitIns_R_R_I(INS_xori, EA_PTRSIZE, SaveCcResultReg, SaveCcResultReg, 1);
+            }
+            else if (tree->OperIs(GT_GT))
+            {
+                emit->emitIns_R_R_R(IsUnsigned ? INS_sltu : INS_slt, EA_8BYTE, SaveCcResultReg, op2->gtRegNum, op1->gtRegNum);
+            }
+            else if (tree->OperIs(GT_GE))
+            {
+                emit->emitIns_R_R_R(IsUnsigned ? INS_sltu : INS_slt, EA_8BYTE, SaveCcResultReg, op1->gtRegNum, op2->gtRegNum);
+
+                emit->emitIns_R_R_I(INS_xori, EA_PTRSIZE, SaveCcResultReg, SaveCcResultReg, 1);
+            }
+            else if (tree->OperIs(GT_NE))
+            {
+                emit->emitIns_R_R_R(INS_xor, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, op2->gtRegNum);
+                emit->emitIns_R_R_R(INS_sltu, EA_PTRSIZE, SaveCcResultReg, REG_R0, SaveCcResultReg);
+            }
+            else if (tree->OperIs(GT_EQ))
+            {
+                emit->emitIns_R_R_R(INS_xor, EA_PTRSIZE, SaveCcResultReg, op1->gtRegNum, op2->gtRegNum);
+
+                emit->emitIns_R_R_I(INS_sltiu, EA_PTRSIZE, SaveCcResultReg, SaveCcResultReg, 1);
+            }
+            else
+            {
+                assert(!"unimplemented on MIPS yet");
+            }
+        }
     }
+}
+
+//------------------------------------------------------------------------
+// genCodeForJumpTrue: Generate code for a GT_JTRUE node.
+//
+// Arguments:
+//    jtrue - The node
+//
+void CodeGen::genCodeForJumpTrue(GenTreeOp* jtrue)
+{
+    assert(compiler->compCurBB->bbJumpKind == BBJ_COND);
+    assert(jtrue->OperIs(GT_JTRUE));
+
+    emitter* emit = getEmitter();
+    regNumber SaveCcResultReg = jtrue->gtGetOp1()->gtRegNum;
+    SaveCcResultReg = SaveCcResultReg != REG_NA ? SaveCcResultReg : REG_AT;
+
+    ssize_t imm = 7 << 2;//size of Jump-placeholders in bytes liking within emitter::emitIns_J() .
+    emit->emitIns_R_R_I(INS_beq, EA_PTRSIZE, SaveCcResultReg, REG_R0, imm);
+    instGen(INS_nop);
+
+    inst_JMP(EJ_jmp, compiler->compCurBB->bbJumpDest);//no branch-delay.
 }
 
 //------------------------------------------------------------------------
@@ -4230,7 +4212,6 @@ void CodeGen::genCodeForJumpCompare(GenTreeOp* tree)
     emitAttr  attr = emitActualTypeSize(op1->TypeGet());
 
     /* FIXME for MIPS: */
-    assert(!"unimplemented on MIPS yet");
     //if (tree->gtFlags & GTF_JCMP_TST)
     //{
     //    assert(!"unimplemented on MIPS yet");
@@ -4244,13 +4225,17 @@ void CodeGen::genCodeForJumpCompare(GenTreeOp* tree)
     //    //getEmitter()->emitIns_J_R_I(ins, attr, compiler->compCurBB->bbJumpDest, reg, imm);
     //}
     //else
-    //{
-    //    assert(op2->IsIntegralConst(0));
+    {
+        assert(op2->IsIntegralConst(0));
 
-    //    instruction ins = (tree->gtFlags & GTF_JCMP_EQ) ? INS_cbz : INS_cbnz;
+        instruction ins = (tree->gtFlags & GTF_JCMP_EQ) ? INS_bne : INS_beq;
 
-    //    getEmitter()->emitIns_J_R(ins, attr, compiler->compCurBB->bbJumpDest, reg);
-    //}
+        ssize_t imm = 7 << 2;//size of Jump-placeholders in bytes liking within emitter::emitIns_J() .
+        getEmitter()->emitIns_R_R_I(ins, EA_PTRSIZE, reg, REG_R0, imm);
+        instGen(INS_nop);
+
+        inst_JMP(EJ_jmp, compiler->compCurBB->bbJumpDest);//no branch-delay.
+    }
 }
 
 //---------------------------------------------------------------------
@@ -6867,12 +6852,11 @@ void CodeGen::genCodeForTreeNode(GenTree* treeNode)
         case GT_GE:
         case GT_GT:
         case GT_CMP:
-            genCodeForCompare(treeNode, false);
+            genCodeForCompare(treeNode->AsOp());
             break;
 
         case GT_JTRUE:
-            /* FIXME for MIPS: merge genCodeForJumpTrue into genCodeForCompare */
-            genCodeForCompare(treeNode, true);
+            genCodeForJumpTrue(treeNode->AsOp());
             break;
 
         case GT_JCMP:

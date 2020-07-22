@@ -991,11 +991,7 @@ protected:
     void genFloatToIntCast(GenTree* treeNode);
     void genIntToFloatCast(GenTree* treeNode);
     void genCkfinite(GenTree* treeNode);
-#ifdef _TARGET_MIPS64_
-    void genCodeForCompare(GenTree* tree, bool IsJump = false);
-#else
     void genCodeForCompare(GenTreeOp* tree);
-#endif
     void genIntrinsic(GenTree* treeNode);
     void genPutArgStk(GenTreePutArgStk* treeNode);
     void genPutArgReg(GenTreeOp* tree);

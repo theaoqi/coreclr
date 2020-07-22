@@ -849,8 +849,11 @@ insGroup* emitter::emitSavIG(bool emitAdd)
         ig->igFlags |= IGF_BYREF_REGS;
 
         /* We'll allocate extra space (DWORD aligned) to record the GC regs */
-
+#if defined(_TARGET_MIPS64_)
+        gs += sizeof(regMaskTP);
+#else
         gs += sizeof(int);
+#endif
     }
 
     /* Allocate space for the instructions and optional liveset */
@@ -863,10 +866,18 @@ insGroup* emitter::emitSavIG(bool emitAdd)
     {
         /* Record the byref regs in front the of the instructions */
 
+#if defined(_TARGET_MIPS64_)
+        *castto(id, regMaskTP*)++ = emitInitByrefRegs;
+#else
         *castto(id, unsigned*)++ = (unsigned)emitInitByrefRegs;
+#endif
     }
 
     /* Do we need to store the liveset? */
+
+#if defined(_TARGET_MIPS64_) && defined(DEBUG) && defined(UNALIGNED_CHECK_DISABLE)
+    UNALIGNED_CHECK_DISABLE;
+#endif
 
     if (ig->igFlags & IGF_GC_VARS)
     {
@@ -1050,6 +1061,10 @@ insGroup* emitter::emitSavIG(bool emitAdd)
                 emitJumpLast = last;
             }
         }
+
+#if defined(_TARGET_MIPS64_) && defined(DEBUG) && defined(UNALIGNED_CHECK_ENABLE)
+        UNALIGNED_CHECK_ENABLE;
+#endif
     }
 
     /* Fix the last instruction field */
@@ -2211,7 +2226,7 @@ void emitter::emitSetFrameRangeGCRs(int offsLo, int offsHi)
     //     257 ..    512 ===>      4 count (100% of total)
     //     513 ..   1024 ===>      0 count (100% of total)
 
-    //if (emitComp->verbose)
+    if (emitComp->verbose)
     {
         unsigned count = (offsHi - offsLo) / TARGET_POINTER_SIZE;
         printf("%u tracked GC refs are at stack offsets ", count);
@@ -3798,6 +3813,9 @@ AGAIN:
 /* Make sure the jumps are properly ordered */
 
 #ifdef DEBUG
+#if defined(_TARGET_MIPS64_) && defined(UNALIGNED_CHECK_DISABLE)
+	UNALIGNED_CHECK_DISABLE;
+#endif
         assert(lastLJ == nullptr || lastIG != jmp->idjIG || lastLJ->idjOffs < jmp->idjOffs);
         lastLJ = (lastIG == jmp->idjIG) ? jmp : nullptr;
 
@@ -3914,7 +3932,7 @@ AGAIN:
             // Conservately assume JIT data starts after the entire code size.
             // TODO-MIPS64: we might consider only hot code size which will be computed later in emitComputeCodeSizes().
             assert(emitTotalCodeSize > 0);
-            UNATIVE_OFFSET maxDstOffs = emitTotalCodeSize + dataOffs;
+            UNATIVE_OFFSET maxDstOffs = emitTotalCodeSize + dataOffs + (emitTotalCodeSize & 0x7); //data is 8-byte aligned.
 
             // Check if the distance is within the encoding length.
             jmpDist = maxDstOffs - srcOffs;
@@ -4146,6 +4164,9 @@ AGAIN:
             }
         }
 
+#if defined(_TARGET_MIPS64_) && defined(DEBUG) && defined(UNALIGNED_CHECK_ENABLE)
+	UNALIGNED_CHECK_ENABLE;
+#endif
         /* We arrive here if the jump couldn't be made short, at least for now */
 
         /* We had better not have eagerly marked the jump as short
@@ -4755,10 +4776,18 @@ unsigned emitter::emitEndCodeGen(Compiler* comp,
         NYI_MIPS64("Need to handle fix-up to data from cold code.");
     }
 
-    emitCmpHandle->allocMem(emitTotalHotCodeSize + emitConsDsc.dsdOffs, emitTotalColdCodeSize, 0,
+    UNATIVE_OFFSET roDataAlignmentDelta = 0;
+    if (emitConsDsc.dsdOffs)
+    {
+        UNATIVE_OFFSET roDataAlignment = TARGET_POINTER_SIZE; // 8 Byte align by default.
+        roDataAlignmentDelta = (UNATIVE_OFFSET)ALIGN_UP(emitTotalHotCodeSize, roDataAlignment) - emitTotalHotCodeSize;
+        assert((roDataAlignmentDelta == 0) || (roDataAlignmentDelta == 4));
+    }
+
+    emitCmpHandle->allocMem(emitTotalHotCodeSize + roDataAlignmentDelta + emitConsDsc.dsdOffs, emitTotalColdCodeSize, 0,
                             xcptnsCount, allocMemFlag, (void**)&codeBlock, (void**)&coldCodeBlock, (void**)&consBlock);
 
-    consBlock = codeBlock + emitTotalHotCodeSize;
+    consBlock = codeBlock + emitTotalHotCodeSize + roDataAlignmentDelta;
 
 #ifdef DEBUG
     bool DspIns = false;

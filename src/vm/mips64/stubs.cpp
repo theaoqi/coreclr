@@ -275,9 +275,7 @@ class LoadFromLabelInstructionFormat : public InstructionFormat
 
 
 
-static BYTE gConditionalBranchIF[sizeof(ConditionalBranchInstructionFormat)];
-static BYTE gBranchIF[sizeof(BranchInstructionFormat)];
-static BYTE gLoadFromLabelIF[sizeof(LoadFromLabelInstructionFormat)];
+static BranchInstructionFormat gBranchIF;
 
 #endif
 
@@ -1496,9 +1494,6 @@ void StubLinkerCPU::EmitAddImm(IntReg Rd, IntReg Rn, unsigned int value)
 
 void StubLinkerCPU::Init()
 {
-    new (gConditionalBranchIF) ConditionalBranchInstructionFormat();
-    new (gBranchIF) BranchInstructionFormat();
-    new (gLoadFromLabelIF) LoadFromLabelInstructionFormat();
 }
 
 // Emits code to adjust arguments for static delegate target.

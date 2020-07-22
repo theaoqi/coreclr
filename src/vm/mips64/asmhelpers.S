@@ -840,7 +840,7 @@ LOCAL_LABEL(UMThunkStub_HaveThread):
     sw  AT, Thread__m_fPreemptiveGCDisabled(v0)
 
     PREPARE_EXTERNAL_VAR  UMThunkStub, g_TrapReturningThreads, a2
-    ld  a3, 0(a2)
+    lw  a3, 0(a2)
     or  a0, s0, zero
     // assuming a0 contains Thread* before jumping to UMThunkStub_DoTrapReturningThreads
     bne  a3, zero, 801f //LOCAL_LABEL(UMThunkStub_DoTrapReturningThreads)

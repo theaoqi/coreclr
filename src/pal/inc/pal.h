@@ -2402,6 +2402,18 @@ typedef struct _KNONVOLATILE_CONTEXT_POINTERS {
 #define MIPS64_MAX_WATCHPOINTS     2
 
 //
+// Unaligned memory accessed checker
+//
+#if !defined(__cplusplus)
+extern int sysmips (const int __cmd, ...);
+#else
+extern int sysmips (const int __cmd, ...) throw();
+#endif
+#define MIPS_FIXADE 7 /* control address error fixing. See loongnix /usr/include/asm/sysmips.h */
+#define UNALIGNED_CHECK_ENABLE  sysmips(MIPS_FIXADE, 0)
+#define UNALIGNED_CHECK_DISABLE sysmips(MIPS_FIXADE, 1)
+
+//
 // Context Frame
 //
 //  This frame has a several purposes: 1) it is used as an argument to

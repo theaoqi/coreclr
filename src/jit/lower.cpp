@@ -2898,8 +2898,7 @@ GenTree* Lowering::LowerCompare(GenTree* cmp)
 //
 GenTree* Lowering::LowerJTrue(GenTreeOp* jtrue)
 {
-// should confirm how optimize on mips64.
-#ifdef _TARGET_ARM64_
+#if defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
     GenTree* relop    = jtrue->gtGetOp1();
     GenTree* relopOp2 = relop->gtOp.gtGetOp2();
 
@@ -2914,12 +2913,14 @@ GenTree* Lowering::LowerJTrue(GenTreeOp* jtrue)
             flags   = relop->OperIs(GT_EQ) ? GTF_JCMP_EQ : 0;
             useJCMP = true;
         }
+#ifndef _TARGET_MIPS64_
         else if (relop->OperIs(GT_TEST_EQ, GT_TEST_NE) && isPow2(relopOp2->AsIntCon()->IconValue()))
         {
             // Codegen will use tbz or tbnz in codegen which do not affect the flag register
             flags   = GTF_JCMP_TST | (relop->OperIs(GT_TEST_EQ) ? GTF_JCMP_EQ : 0);
             useJCMP = true;
         }
+#endif // !_TARGET_MIPS64_
 
         if (useJCMP)
         {
@@ -2936,7 +2937,7 @@ GenTree* Lowering::LowerJTrue(GenTreeOp* jtrue)
             return nullptr;
         }
     }
-#endif // _TARGET_ARM64_
+#endif // _TARGET_ARM64_ || _TARGET_MIPS64_
 
     ContainCheckJTrue(jtrue);
 
@@ -3242,13 +3243,13 @@ GenTree* Lowering::CreateReturnTrapSeq()
     GenTree* testTree;
     if (addrOfCaptureThreadGlobal != nullptr)
     {
-        testTree = Ind(AddrGen(addrOfCaptureThreadGlobal));
+        testTree = AddrGen(addrOfCaptureThreadGlobal);
     }
     else
     {
-        testTree = Ind(Ind(AddrGen(pAddrOfCaptureThreadGlobal)));
+        testTree = Ind(AddrGen(pAddrOfCaptureThreadGlobal));
     }
-    return comp->gtNewOperNode(GT_RETURNTRAP, TYP_INT, testTree);
+    return comp->gtNewOperNode(GT_RETURNTRAP, TYP_INT, Ind(testTree, TYP_INT));
 }
 
 //------------------------------------------------------------------------

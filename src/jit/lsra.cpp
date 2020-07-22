@@ -7793,7 +7793,7 @@ void LinearScan::handleOutgoingCriticalEdges(BasicBlock* block)
         switchRegs |= genRegMask(op2->gtRegNum);
     }
 
-#ifdef _TARGET_ARM64_
+#if defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
     // Next, if this blocks ends with a JCMP, we have to make sure not to copy
     // into the register that it uses or modify the local variable it must consume
     LclVarDsc* jcmpLocalVarDsc = nullptr;
@@ -7889,7 +7889,7 @@ void LinearScan::handleOutgoingCriticalEdges(BasicBlock* block)
                 sameToReg = REG_NA;
             }
 
-#ifdef _TARGET_ARM64_
+#if defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
             if (jcmpLocalVarDsc && (jcmpLocalVarDsc->lvVarIndex == outResolutionSetVarIndex))
             {
                 sameToReg = REG_NA;

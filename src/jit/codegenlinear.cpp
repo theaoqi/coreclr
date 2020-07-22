@@ -2267,6 +2267,7 @@ void CodeGen::genStoreLongLclVar(GenTree* treeNode)
 }
 #endif // !defined(_TARGET_64BIT_)
 
+#ifndef _TARGET_MIPS64_
 //------------------------------------------------------------------------
 // genCodeForJumpTrue: Generate code for a GT_JTRUE node.
 //
@@ -2287,6 +2288,7 @@ void CodeGen::genCodeForJumpTrue(GenTreeOp* jtrue)
 
     inst_JCC(condition, compiler->compCurBB->bbJumpDest);
 }
+#endif // !_TARGET_MIPS64_
 
 //------------------------------------------------------------------------
 // genCodeForJcc: Generate code for a GT_JCC node.

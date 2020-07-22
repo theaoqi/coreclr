@@ -1066,7 +1066,8 @@ RtlpGetFunctionEndAddress (
     if ((FunctionLength & 3) != 0) {
         FunctionLength = (FunctionLength >> 2) & 0x7ff;
     } else {
-        FunctionLength = *(PTR_ULONG64)(ImageBase + FunctionLength) & 0x3ffff;
+        memcpy(&FunctionLength, (void*)(ImageBase + FunctionLength), sizeof(UINT32));
+        FunctionLength &= 0x3ffff;
     }
 
     return FunctionEntry->BeginAddress + 4 * FunctionLength;
