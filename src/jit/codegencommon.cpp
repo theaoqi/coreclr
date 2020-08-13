@@ -7141,7 +7141,6 @@ void CodeGen::genZeroInitFrame(int untrLclHi, int untrLclLo, regNumber initReg, 
         if (uCntBytes > 0)
         {
             assert(uCntBytes == sizeof(int));
-            assert(padding == sizeof(int));
             getEmitter()->emitIns_R_R_I(INS_sw, EA_4BYTE, REG_R0, rAddr, padding);
             uCntBytes -= sizeof(int);
         }
