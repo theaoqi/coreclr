@@ -8533,9 +8533,19 @@ regNumber emitter::emitInsTernary(instruction ins, emitAttr attr, GenTree* dst, 
     else if (dst->OperGet() == GT_MUL)
     {
         ssize_t imm;
-
+        if (EA_SIZE(attr) == EA_4BYTE)
+        {
+            regNumber tmpRegOp1 = dst->ExtractTempReg();
+            regNumber tmpRegOp2 = dst->ExtractTempReg();
+            emitIns_R_R_I(INS_sll, attr, tmpRegOp1, src1->gtRegNum, 0);
+            emitIns_R_R_I(INS_sll, attr, tmpRegOp2, src2->gtRegNum, 0);
+            emitIns_R_R(ins, attr, tmpRegOp1, tmpRegOp2);
+        }
+        else
+        {
+            emitIns_R_R(ins, attr, src1->gtRegNum, src2->gtRegNum);
+        }
         // n * n bytes will store n bytes result
-        emitIns_R_R(ins, EA_SIZE(attr), src1->gtRegNum, src2->gtRegNum);
         emitIns_R(INS_mflo, attr, dst->gtRegNum);
 
         if (needCheckOv)
@@ -8571,7 +8581,18 @@ regNumber emitter::emitInsTernary(instruction ins, emitAttr attr, GenTree* dst, 
     }
     else if (dst->OperGet() == GT_DIV || dst->OperGet() == GT_UDIV || dst->OperGet() == GT_MOD || dst->OperGet() == GT_UMOD)
     {
-        emitIns_R_R(ins, EA_SIZE(attr), src1->gtRegNum, src2->gtRegNum);
+        if (EA_SIZE(attr) == EA_4BYTE)
+        {
+            regNumber tmpRegOp1 = dst->ExtractTempReg();
+            regNumber tmpRegOp2 = dst->ExtractTempReg();
+            emitIns_R_R_I(INS_sll, attr, tmpRegOp1, src1->gtRegNum, 0);
+            emitIns_R_R_I(INS_sll, attr, tmpRegOp2, src2->gtRegNum, 0);
+            emitIns_R_R(ins, attr, tmpRegOp1, tmpRegOp2);
+        }
+        else
+        {
+            emitIns_R_R(ins, attr, src1->gtRegNum, src2->gtRegNum);
+        }
 
         if (dst->OperGet() == GT_DIV || dst->OperGet() == GT_UDIV)
             emitIns_R(INS_mflo, attr, dst->gtRegNum);

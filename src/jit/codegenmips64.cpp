@@ -1708,10 +1708,14 @@ void CodeGen::genCodeForMulHi(GenTreeOp* treeNode)
     else
     {
         assert(EA_SIZE(attr) == EA_4BYTE);
+        regNumber tmpRegOp1 = treeNode->ExtractTempReg();
+        regNumber tmpRegOp2 = treeNode->ExtractTempReg();
+        emit->emitIns_R_R_I(INS_sll, attr, tmpRegOp1, op1->gtRegNum, 0);
+        emit->emitIns_R_R_I(INS_sll, attr, tmpRegOp2, op2->gtRegNum, 0);
 
         instruction ins = isUnsigned ? INS_multu : INS_mult;
 
-        emit->emitIns_R_R(ins, attr, op1->gtRegNum, op2->gtRegNum);
+        emit->emitIns_R_R(ins, attr, tmpRegOp1, tmpRegOp2);
 
         emit->emitIns_R(INS_mfhi, attr, targetReg);
     }
