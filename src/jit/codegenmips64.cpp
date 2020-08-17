@@ -2334,7 +2334,7 @@ void CodeGen::genCodeForNegNot(GenTree* tree)
     if (ins == INS_not && attr == EA_4BYTE)
     {
         // MIPS needs to sign-extend dst when deal with 32bit data
-        getEmitter()->emitIns_R_R_R(INS_addu, attr, targetReg, targetReg, REG_R0);
+        getEmitter()->emitIns_R_R_I(INS_sll, attr, targetReg, targetReg, 0);
     }
 
     genProduceReg(tree);
@@ -4047,7 +4047,7 @@ void CodeGen::genCodeForCompare(GenTreeOp* tree)
                 if (IsUnsigned)
                     emit->emitIns_R_R_I_I(INS_dext, EA_PTRSIZE, tmpRegOp1, op1->gtRegNum, 0, 32);
                 else
-                    emit->emitIns_R_R_R(INS_addu, EA_PTRSIZE, tmpRegOp1, op1->gtRegNum, REG_R0);
+                    emit->emitIns_R_R_I(INS_sll, EA_4BYTE, tmpRegOp1, op1->gtRegNum, 0);
             }
 
             if (tree->OperIs(GT_CMP))
@@ -4144,8 +4144,8 @@ void CodeGen::genCodeForCompare(GenTreeOp* tree)
                 }
                 else
                 {
-                    emit->emitIns_R_R_R(INS_addu, EA_PTRSIZE, tmpRegOp1, op1->gtRegNum, REG_R0);
-                    emit->emitIns_R_R_R(INS_addu, EA_PTRSIZE, tmpRegOp2, op2->gtRegNum, REG_R0);
+                    emit->emitIns_R_R_I(INS_sll, EA_4BYTE, tmpRegOp1, op1->gtRegNum, 0);
+                    emit->emitIns_R_R_I(INS_sll, EA_4BYTE, tmpRegOp2, op2->gtRegNum, 0);
                 }
             }
 
@@ -9455,7 +9455,7 @@ void CodeGen::genIntToIntCast(GenTreeCast* cast)
     //    if (dstType == TYP_INT)
     //    {
     //        // convert t0 int32
-    //        emit->emitIns_R_R_I(INS_addiu, EA_4BYTE, dstReg, srcReg, 0);
+    //        emit->emitIns_R_R_I(INS_sll, EA_4BYTE, dstReg, srcReg, 0);
     //    }
     //    else
     //    {
@@ -9490,7 +9490,7 @@ void CodeGen::genIntToIntCast(GenTreeCast* cast)
                 emit->emitIns_R_R_I_I(INS_dext, EA_PTRSIZE, dstReg, srcReg, pos, 32);
                 break;
             case GenIntCastDesc::SIGN_EXTEND_INT:
-                emit->emitIns_R_R_I(INS_addiu, EA_4BYTE, dstReg, srcReg, 0);
+                emit->emitIns_R_R_I(INS_sll, EA_4BYTE, dstReg, srcReg, 0);
                 break;
 #endif
             default:

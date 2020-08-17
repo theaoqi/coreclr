@@ -8653,7 +8653,7 @@ regNumber emitter::emitInsTernary(instruction ins, emitAttr attr, GenTree* dst, 
 
         // MIPS needs to sign-extend dst when deal with 32bit data
         if (attr == EA_4BYTE)
-             emitIns_R_R_R(INS_addu, attr, dst->gtRegNum, dst->gtRegNum, REG_R0);
+             emitIns_R_R_I(INS_sll, attr, dst->gtRegNum, dst->gtRegNum, 0);
     }
     else
     {
