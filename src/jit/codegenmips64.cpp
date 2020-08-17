@@ -2681,6 +2681,8 @@ void CodeGen::genCodeForCpObj(GenTreeObj* cpObjNode)
     emitter* emit = getEmitter();
 
     BYTE* gcPtrs = cpObjNode->gtGcPtrs;
+    emitAttr attrSrcAddr = emitActualTypeSize(srcAddrType);
+    emitAttr attrDstAddr = emitActualTypeSize(dstAddr->TypeGet());
 
     // If we can prove it's on the stack we don't need to use the write barrier.
     if (dstOnStack)
@@ -2693,11 +2695,11 @@ void CodeGen::genCodeForCpObj(GenTreeObj* cpObjNode)
             emitAttr attr1 = emitTypeSize(compiler->getJitGCType(gcPtrs[i + 1]));
 
             emit->emitIns_R_R_I(INS_ld, attr0, tmpReg, REG_WRITE_BARRIER_SRC_BYREF, 0);
-            emit->emitIns_R_R_I(INS_ld, attr0, tmpReg2, REG_WRITE_BARRIER_SRC_BYREF, TARGET_POINTER_SIZE);
-            emit->emitIns_R_R_I(INS_daddiu, attr1, REG_WRITE_BARRIER_SRC_BYREF, REG_WRITE_BARRIER_SRC_BYREF, 2 * TARGET_POINTER_SIZE);
+            emit->emitIns_R_R_I(INS_ld, attr1, tmpReg2, REG_WRITE_BARRIER_SRC_BYREF, TARGET_POINTER_SIZE);
+            emit->emitIns_R_R_I(INS_daddiu, attrSrcAddr, REG_WRITE_BARRIER_SRC_BYREF, REG_WRITE_BARRIER_SRC_BYREF, 2 * TARGET_POINTER_SIZE);
             emit->emitIns_R_R_I(INS_sd, attr0, tmpReg, REG_WRITE_BARRIER_DST_BYREF, 0);
-            emit->emitIns_R_R_I(INS_sd, attr0, tmpReg2, REG_WRITE_BARRIER_DST_BYREF, TARGET_POINTER_SIZE);
-            emit->emitIns_R_R_I(INS_daddiu, attr1, REG_WRITE_BARRIER_DST_BYREF, REG_WRITE_BARRIER_DST_BYREF, 2 * TARGET_POINTER_SIZE);
+            emit->emitIns_R_R_I(INS_sd, attr1, tmpReg2, REG_WRITE_BARRIER_DST_BYREF, TARGET_POINTER_SIZE);
+            emit->emitIns_R_R_I(INS_daddiu, attrDstAddr, REG_WRITE_BARRIER_DST_BYREF, REG_WRITE_BARRIER_DST_BYREF, 2 * TARGET_POINTER_SIZE);
             i += 2;
         }
 
@@ -2707,9 +2709,9 @@ void CodeGen::genCodeForCpObj(GenTreeObj* cpObjNode)
             emitAttr attr0 = emitTypeSize(compiler->getJitGCType(gcPtrs[i + 0]));
 
             emit->emitIns_R_R_I(INS_ld, attr0, tmpReg, REG_WRITE_BARRIER_SRC_BYREF, 0);
-            emit->emitIns_R_R_I(INS_daddiu, attr0, REG_WRITE_BARRIER_SRC_BYREF, REG_WRITE_BARRIER_SRC_BYREF, TARGET_POINTER_SIZE);
+            emit->emitIns_R_R_I(INS_daddiu, attrSrcAddr, REG_WRITE_BARRIER_SRC_BYREF, REG_WRITE_BARRIER_SRC_BYREF, TARGET_POINTER_SIZE);
             emit->emitIns_R_R_I(INS_sd, attr0, tmpReg, REG_WRITE_BARRIER_DST_BYREF, 0);
-            emit->emitIns_R_R_I(INS_daddiu, attr0, REG_WRITE_BARRIER_DST_BYREF, REG_WRITE_BARRIER_DST_BYREF, TARGET_POINTER_SIZE);
+            emit->emitIns_R_R_I(INS_daddiu, attrDstAddr, REG_WRITE_BARRIER_DST_BYREF, REG_WRITE_BARRIER_DST_BYREF, TARGET_POINTER_SIZE);
         }
     }
     else
@@ -2727,18 +2729,18 @@ void CodeGen::genCodeForCpObj(GenTreeObj* cpObjNode)
                     {
                         emit->emitIns_R_R_I(INS_ld, EA_8BYTE, tmpReg, REG_WRITE_BARRIER_SRC_BYREF, 0);
                         emit->emitIns_R_R_I(INS_ld, EA_8BYTE, tmpReg2, REG_WRITE_BARRIER_SRC_BYREF, TARGET_POINTER_SIZE);
-                        emit->emitIns_R_R_I(INS_daddiu, EA_8BYTE, REG_WRITE_BARRIER_SRC_BYREF, REG_WRITE_BARRIER_SRC_BYREF, 2 * TARGET_POINTER_SIZE);
+                        emit->emitIns_R_R_I(INS_daddiu, attrSrcAddr, REG_WRITE_BARRIER_SRC_BYREF, REG_WRITE_BARRIER_SRC_BYREF, 2 * TARGET_POINTER_SIZE);
                         emit->emitIns_R_R_I(INS_sd, EA_8BYTE, tmpReg, REG_WRITE_BARRIER_DST_BYREF, 0);
                         emit->emitIns_R_R_I(INS_sd, EA_8BYTE, tmpReg2, REG_WRITE_BARRIER_DST_BYREF, TARGET_POINTER_SIZE);
-                        emit->emitIns_R_R_I(INS_daddiu, EA_8BYTE, REG_WRITE_BARRIER_DST_BYREF, REG_WRITE_BARRIER_DST_BYREF, 2 * TARGET_POINTER_SIZE);
+                        emit->emitIns_R_R_I(INS_daddiu, attrDstAddr, REG_WRITE_BARRIER_DST_BYREF, REG_WRITE_BARRIER_DST_BYREF, 2 * TARGET_POINTER_SIZE);
                         ++i; // extra increment of i, since we are copying two items
                     }
                     else
                     {
                         emit->emitIns_R_R_I(INS_ld, EA_8BYTE, tmpReg, REG_WRITE_BARRIER_SRC_BYREF, 0);
-                        emit->emitIns_R_R_I(INS_daddiu, EA_8BYTE, REG_WRITE_BARRIER_SRC_BYREF, REG_WRITE_BARRIER_SRC_BYREF, TARGET_POINTER_SIZE);
+                        emit->emitIns_R_R_I(INS_daddiu, attrSrcAddr, REG_WRITE_BARRIER_SRC_BYREF, REG_WRITE_BARRIER_SRC_BYREF, TARGET_POINTER_SIZE);
                         emit->emitIns_R_R_I(INS_sd, EA_8BYTE, tmpReg, REG_WRITE_BARRIER_DST_BYREF, 0);
-                        emit->emitIns_R_R_I(INS_daddiu, EA_8BYTE, REG_WRITE_BARRIER_DST_BYREF, REG_WRITE_BARRIER_DST_BYREF, TARGET_POINTER_SIZE);
+                        emit->emitIns_R_R_I(INS_daddiu, attrDstAddr, REG_WRITE_BARRIER_DST_BYREF, REG_WRITE_BARRIER_DST_BYREF, TARGET_POINTER_SIZE);
                     }
                     break;
 
