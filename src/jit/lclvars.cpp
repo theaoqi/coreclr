@@ -2235,6 +2235,13 @@ void Compiler::StructPromotionHelper::PromoteStructVar(unsigned lclNum)
         fieldVarDsc->lvFldOrdinal    = pFieldInfo->fldOrdinal;
         fieldVarDsc->lvParentLcl     = lclNum;
         fieldVarDsc->lvIsParam       = varDsc->lvIsParam;
+
+        // This new local may be the first time we've seen a long typed local.
+        if (fieldVarDsc->lvType == TYP_LONG)
+        {
+            compiler->compLongUsed = true;
+        }
+
 #if defined(_TARGET_AMD64_) || defined(_TARGET_ARM64_) || defined(_TARGET_MIPS64_)
 
         // Reset the implicitByRef flag.
@@ -2751,7 +2758,7 @@ void Compiler::lvaSetClass(unsigned varNum, CORINFO_CLASS_HANDLE clsHnd, bool is
 // Notes:
 //    Preferentially uses the tree's type, when available. Since not all
 //    tree kinds can track ref types, the stack type is used as a
-//    fallback.
+//    fallback. If there is no stack type, then the class is set to object.
 
 void Compiler::lvaSetClass(unsigned varNum, GenTree* tree, CORINFO_CLASS_HANDLE stackHnd)
 {
@@ -2766,6 +2773,10 @@ void Compiler::lvaSetClass(unsigned varNum, GenTree* tree, CORINFO_CLASS_HANDLE 
     else if (stackHnd != nullptr)
     {
         lvaSetClass(varNum, stackHnd);
+    }
+    else
+    {
+        lvaSetClass(varNum, impGetObjectClass());
     }
 }
 

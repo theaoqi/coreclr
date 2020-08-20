@@ -2210,6 +2210,7 @@ struct ComPlusCallInfo;
 class DelegateEEClass : public EEClass
 {
 public:
+    DAC_ALIGNAS(EEClass) // Align the first member to the alignment of the base class
     PTR_Stub                         m_pStaticCallStub;
     PTR_Stub                         m_pInstRetBuffCallStub;
     RelativePointer<PTR_MethodDesc>  m_pInvokeMethod;
@@ -2280,6 +2281,7 @@ class ArrayClass : public EEClass
 
 private:
 
+    DAC_ALIGNAS(EEClass) // Align the first member to the alignment of the base class
     unsigned char   m_rank;
     CorElementType  m_ElementType;// Cache of element type in m_ElementTypeHnd
 
