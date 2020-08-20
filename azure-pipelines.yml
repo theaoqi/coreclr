@@ -6,12 +6,14 @@ trigger:
     - mips64-port
     - release/3.0
     - releaes/3.0-mips64-port
+    - releaes/3.1-mips64-port
 
 pr:
 - master
 - mips64-port
 - release/3.0
 - release/3.0-mips64-port
+- release/3.1-mips64-port
 
 # Temporarily set a build number format that includes a large revision
 # number that won't conflict with buildpipeline official builds.
