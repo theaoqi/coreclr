@@ -106,6 +106,13 @@ typedef DPTR(GCCoverageInfo) PTR_GCCoverageInfo; // see code:GCCoverageInfo::sav
 #define INTERRUPT_INSTR_CALL            0xBADC0DE1         
 #define INTERRUPT_INSTR_PROTECT_RET     0xBADC0DE2  
 
+#elif defined(_TARGET_MIPS64_)
+
+// The following encodings are undefined.
+#define INTERRUPT_INSTR                 0x42000029
+#define INTERRUPT_INSTR_CALL            0x4200002A
+#define INTERRUPT_INSTR_PROTECT_RET     0x4200002B
+
 #endif // _TARGET_*
 
 // The body of this method is in this header file to allow
@@ -114,6 +121,19 @@ typedef DPTR(GCCoverageInfo) PTR_GCCoverageInfo; // see code:GCCoverageInfo::sav
 inline bool IsGcCoverageInterruptInstructionVal(UINT32 instrVal)
 {
 #if defined(_TARGET_ARM64_)
+
+    switch (instrVal)
+    {
+    case INTERRUPT_INSTR:
+    case INTERRUPT_INSTR_CALL:
+    case INTERRUPT_INSTR_PROTECT_RET:
+        return true;
+    default:
+        return false;
+    }
+
+#elif defined(_TARGET_MIPS64_)
+////FIXME for MIPS.
 
     switch (instrVal)
     {

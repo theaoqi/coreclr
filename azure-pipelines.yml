@@ -3,11 +3,17 @@ trigger:
   branches:
     include:
     - master
+    - mips64-port
     - release/3.0
+    - releaes/3.0-mips64-port
+    - releaes/3.1-mips64-port
 
 pr:
 - master
+- mips64-port
 - release/3.0
+- release/3.0-mips64-port
+- release/3.1-mips64-port
 
 # Temporarily set a build number format that includes a large revision
 # number that won't conflict with buildpipeline official builds.
@@ -101,6 +107,9 @@ jobs:
         - OSX_x64
         - Windows_NT_arm
         - Windows_NT_arm64
+      ${{ if and(eq(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.DefinitionName'], 'gsvm.coreclr-ci')) }}:
+        platforms:
+        - Windows_NT_x64
 
 #
 # Checked builds
@@ -125,6 +134,16 @@ jobs:
         platformGroup: all
       ${{ if eq(variables['Build.DefinitionName'], 'coreclr-outerloop') }}:
         platformGroup: all
+      ${{ if and(eq(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.DefinitionName'], 'gsvm.coreclr-ci')) }}:
+        platforms:
+        - Linux_arm
+        - Linux_arm64
+        - Linux_x64
+        - OSX_x64
+        - Windows_NT_arm
+        - Windows_NT_arm64
+        - Windows_NT_x64
+        - Windows_NT_x86
 
 #
 # Release builds
@@ -149,6 +168,14 @@ jobs:
         - Linux_x64
         - OSX_x64
         - Windows_NT_x86
+      ${{ if and(eq(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.DefinitionName'], 'gsvm.coreclr-ci')) }}:
+        platforms:
+        - Linux_arm64
+        - Linux_musl_x64
+        - Linux_rhel6_x64
+        - Windows_NT_arm
+        - Windows_NT_arm64
+        - Windows_NT_x64
 
 - ${{ if and(eq(variables['System.TeamProject'], 'internal'), ne(variables['Build.Reason'], 'PullRequest')) }}:
   - template: eng/platform-matrix.yml

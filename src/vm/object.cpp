@@ -470,6 +470,14 @@ void STDCALL CopyValueClassArgUnchecked(ArgDestination *argDest, void* src, Meth
         return;
     }
 
+#elif defined(_TARGET_MIPS64_)
+
+    if (argDest->IsStructPassedInRegs())
+    {
+        argDest->CopyStructToRegisters(src, pMT->GetNumInstanceFieldBytes(), destOffset);
+        return;
+    }
+
 #endif // UNIX_AMD64_ABI
     // destOffset is only valid for Nullable<T> passed in registers
     _ASSERTE(destOffset == 0);
@@ -485,7 +493,7 @@ void InitValueClassArg(ArgDestination *argDest, MethodTable *pMT)
     STATIC_CONTRACT_FORBID_FAULT;
     STATIC_CONTRACT_MODE_COOPERATIVE;
 
-#if defined(UNIX_AMD64_ABI)
+#if defined(UNIX_AMD64_ABI) || defined(_TARGET_MIPS64_)
 
     if (argDest->IsStructPassedInRegs())
     {
@@ -1906,7 +1914,7 @@ BOOL Nullable::UnBoxIntoArgNoGC(ArgDestination *argDest, OBJECTREF boxedVal, Met
     }
     CONTRACTL_END;
 
-#if defined(UNIX_AMD64_ABI)
+#if defined(UNIX_AMD64_ABI) || defined(_TARGET_MIPS64_)
     if (argDest->IsStructPassedInRegs())
     {
         // We should only get here if we are unboxing a T as a Nullable<T>
@@ -1944,7 +1952,7 @@ BOOL Nullable::UnBoxIntoArgNoGC(ArgDestination *argDest, OBJECTREF boxedVal, Met
         return TRUE;
     }
 
-#endif // UNIX_AMD64_ABI
+#endif // UNIX_AMD64_ABI || _TARGET_MIPS64_
 
     return UnBoxNoGC(argDest->GetDestinationAddress(), boxedVal, destMT);
 }
